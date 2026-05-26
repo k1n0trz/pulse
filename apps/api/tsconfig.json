@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "noEmit": false,
+    "composite": false,
+    "declaration": false
+  },
+  "include": ["src", "prisma"],
+  "references": [{ "path": "../../packages/shared" }]
+}

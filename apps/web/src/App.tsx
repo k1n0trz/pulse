@@ -1,0 +1,275 @@
+import { useMemo, useState } from "react";
+import { Activity, AlertTriangle, BarChart3, Bot, CalendarDays, FileText, Gauge, Layers3, Megaphone, Plus, ShieldCheck, Sparkles, Target, Zap } from "lucide-react";
+import { accountTrend, defaultPolicy, mockCampaigns } from "./agents/pulse/services/mockPulseData";
+import { createOptimizationPlan } from "./agents/pulse/optimizer/pulseOptimizer";
+import { runPulseAutopilot } from "./agents/pulse/autopilot/pulseAutopilot";
+import { auditAccount } from "./agents/pulse/audit/pulseAudit";
+import { buildExecutiveReport } from "./agents/pulse/reports/pulseReports";
+import { ChatPulse } from "./agents/pulse/components/ChatPulse";
+import { CampaignTable } from "./agents/pulse/components/CampaignTable";
+import { CampaignWizard } from "./agents/pulse/components/CampaignWizard";
+import { DashboardCharts } from "./agents/pulse/components/DashboardCharts";
+import { ModeControl } from "./agents/pulse/components/ModeControl";
+import { AutopilotPanel } from "./agents/pulse/components/AutopilotPanel";
+import type { OperationMode } from "@pulse/shared";
+import { metaConnectorPrinciples } from "@pulse/shared";
+
+type Section = "inicio" | "campanas" | "autopilot" | "chat" | "auditoria" | "reportes" | "wizard";
+
+const nav = [
+  { id: "inicio", label: "Inicio", icon: Gauge },
+  { id: "campanas", label: "Campanas", icon: Megaphone },
+  { id: "autopilot", label: "Autopilot", icon: Zap },
+  { id: "chat", label: "Chat Pulse", icon: Bot },
+  { id: "auditoria", label: "Auditoria", icon: ShieldCheck },
+  { id: "reportes", label: "Reportes", icon: FileText }
+] satisfies Array<{ id: Section; label: string; icon: typeof Gauge }>;
+
+function money(value: number) {
+  return `$${value.toLocaleString("en-US")}`;
+}
+
+export function App() {
+  const [mode, setMode] = useState<OperationMode>("assisted");
+  const [section, setSection] = useState<Section>("inicio");
+  const [policy, setPolicy] = useState(defaultPolicy);
+  const plan = useMemo(() => createOptimizationPlan(mockCampaigns, policy), [policy]);
+  const autopilot = useMemo(() => runPulseAutopilot({ campaigns: mockCampaigns, mode, policy }), [mode, policy]);
+  const audit = useMemo(() => auditAccount(mockCampaigns, plan.alerts), [plan.alerts]);
+  const report = useMemo(() => buildExecutiveReport(mockCampaigns, plan), [plan]);
+
+  const spend = mockCampaigns.reduce((sum, item) => sum + item.spend, 0);
+  const results = mockCampaigns.reduce((sum, item) => sum + item.results, 0);
+  const leads = mockCampaigns.filter((item) => item.objective === "Leads").reduce((sum, item) => sum + item.results, 0);
+  const sales = mockCampaigns.filter((item) => item.objective === "Ventas").reduce((sum, item) => sum + item.results, 0);
+  const avgRoas = report.roas;
+  const avgCpa = Math.round(spend / Math.max(results, 1));
+  const avgCtr = Number((mockCampaigns.reduce((sum, item) => sum + item.ctr, 0) / mockCampaigns.length).toFixed(2));
+  const avgCpm = Number((mockCampaigns.reduce((sum, item) => sum + item.cpm, 0) / mockCampaigns.length).toFixed(2));
+
+  return (
+    <div className="pulse-shell">
+      <aside className="sidebar">
+        <div className="brand">
+          <div className="brand-mark">
+            <Activity size={26} />
+          </div>
+          <div>
+            <strong>PULSE</strong>
+            <span>Ads Intelligence Agent</span>
+          </div>
+        </div>
+
+        <div className="account-box">
+          <span>Cuenta publicitaria</span>
+          <strong>Edi Business Account</strong>
+          <small>ID: 238475928374895</small>
+          <em>Conectado a Meta Ads</em>
+        </div>
+
+        <nav className="nav-list">
+          {nav.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button key={item.id} className={section === item.id ? "active" : ""} onClick={() => setSection(item.id)}>
+                <Icon size={18} />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        <ModeControl mode={mode} onModeChange={setMode} policy={policy} onPolicyChange={setPolicy} />
+      </aside>
+
+      <main className="workspace">
+        <header className="topbar">
+          <div>
+            <h1>Hola, Edi</h1>
+            <p>Rendimiento y ejecucion activa de campanas Meta Ads.</p>
+          </div>
+          <div className="topbar-actions">
+            <button className="ghost-button">
+              <CalendarDays size={16} />
+              Ultimos 7 dias
+            </button>
+            <button className="ghost-button" onClick={() => setSection("auditoria")}>
+              <ShieldCheck size={16} />
+              Auditar cuenta
+            </button>
+            <button className="primary-button" onClick={() => setSection("wizard")}>
+              <Plus size={17} />
+              Nueva campana
+            </button>
+          </div>
+        </header>
+
+        <section className="metric-grid">
+          <Metric icon={BarChart3} label="Inversion total" value={money(spend)} change="+18.7%" tone="good" />
+          <Metric icon={Target} label="Resultados" value={results.toLocaleString("en-US")} change="+23.5%" tone="good" />
+          <Metric icon={AlertTriangle} label="CPA promedio" value={money(avgCpa)} change="+12.3%" tone="bad" />
+          <Metric icon={Sparkles} label="ROAS" value={`${avgRoas}x`} change="+33.3%" tone="good" />
+          <Metric icon={Layers3} label="CTR / CPM" value={`${avgCtr}% / $${avgCpm}`} change="+8.4%" tone="good" />
+          <Metric icon={Megaphone} label="Campanas activas" value="17" change={`${plan.alerts.length} alertas`} tone="warn" />
+        </section>
+
+        {section === "inicio" && (
+          <div className="dashboard-grid">
+            <DashboardCharts trend={accountTrend} leads={leads} sales={sales} />
+            <AlertsPanel plan={plan} />
+            <CampaignTable campaigns={mockCampaigns} compact />
+            <AutopilotPanel mode={mode} policy={policy} result={autopilot} onPolicyChange={setPolicy} />
+            <RecommendationsPanel plan={plan} />
+            <ActivityPanel />
+          </div>
+        )}
+
+        {section === "campanas" && <CampaignTable campaigns={mockCampaigns} />}
+        {section === "autopilot" && <AutopilotPanel mode={mode} policy={policy} result={autopilot} onPolicyChange={setPolicy} expanded />}
+        {section === "chat" && <ChatPulse mode={mode} recommendations={plan.recommendations} />}
+        {section === "auditoria" && <AuditView audit={audit} />}
+        {section === "reportes" && <ReportsView report={report} connectorPrinciples={metaConnectorPrinciples} />}
+        {section === "wizard" && <CampaignWizard />}
+      </main>
+    </div>
+  );
+}
+
+function Metric({ icon: Icon, label, value, change, tone }: { icon: typeof Gauge; label: string; value: string; change: string; tone: "good" | "bad" | "warn" }) {
+  return (
+    <article className="metric-panel">
+      <div className="metric-icon">
+        <Icon size={26} />
+      </div>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <small className={tone}>{change} vs periodo previo</small>
+    </article>
+  );
+}
+
+function AlertsPanel({ plan }: { plan: ReturnType<typeof createOptimizationPlan> }) {
+  return (
+    <section className="panel alerts-panel">
+      <div className="panel-head">
+        <h2>Alertas criticas</h2>
+        <span>{plan.alerts.length}</span>
+      </div>
+      <div className="stack">
+        {plan.alerts.slice(0, 4).map((alert) => (
+          <div className={`alert-row ${alert.severity}`} key={alert.id}>
+            <AlertTriangle size={17} />
+            <div>
+              <strong>{alert.title}</strong>
+              <p>{alert.description}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function RecommendationsPanel({ plan }: { plan: ReturnType<typeof createOptimizationPlan> }) {
+  return (
+    <section className="panel recommendations-panel">
+      <div className="panel-head">
+        <h2>Recomendaciones IA</h2>
+        <span>{plan.recommendations.length}</span>
+      </div>
+      <div className="stack">
+        {plan.recommendations.slice(0, 5).map((item) => (
+          <div className="recommendation-row" key={item.id}>
+            <span className={`severity ${item.severity}`}>{item.severity}</span>
+            <div>
+              <strong>{item.title}</strong>
+              <p>{item.expectedImpact}</p>
+            </div>
+            <button>{item.requiresApproval ? "Aprobar" : "Ejecutar"}</button>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ActivityPanel() {
+  return (
+    <section className="panel activity-panel">
+      <div className="panel-head">
+        <h2>Actividad reciente</h2>
+        <span>Live</span>
+      </div>
+      <div className="timeline">
+        <p><strong>Pulse escalo presupuesto</strong><span>Remarketing 7 dias +15%</span></p>
+        <p><strong>Auditoria detecto fatiga</strong><span>Interes Frio 25-65</span></p>
+        <p><strong>Simulacion lista</strong><span>5 acciones pendientes</span></p>
+      </div>
+    </section>
+  );
+}
+
+function AuditView({ audit }: { audit: ReturnType<typeof auditAccount> }) {
+  const items = [
+    ["Estructura", audit.structure],
+    ["Tracking", audit.tracking],
+    ["Creatividad", audit.creative],
+    ["Presupuesto", audit.budget],
+    ["Segmentacion", audit.audience]
+  ];
+
+  return (
+    <section className="single-view">
+      <div className="panel audit-hero">
+        <div>
+          <span>Score de cuenta</span>
+          <strong>{audit.score}/100</strong>
+          <p>Pulse evalua estructura, tracking, creatividades, presupuesto y segmentacion.</p>
+        </div>
+        <ShieldCheck size={96} />
+      </div>
+      <div className="audit-grid">
+        {items.map(([label, value]) => (
+          <article className="panel audit-card" key={label}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+            <div className="bar"><i style={{ width: `${value}%` }} /></div>
+          </article>
+        ))}
+      </div>
+      <section className="panel">
+        <h2>Hallazgos</h2>
+        <div className="stack">
+          {audit.findings.map((finding) => <p className="finding" key={finding}>{finding}</p>)}
+        </div>
+      </section>
+    </section>
+  );
+}
+
+function ReportsView({ report, connectorPrinciples }: { report: ReturnType<typeof buildExecutiveReport>; connectorPrinciples: string[] }) {
+  return (
+    <section className="single-view">
+      <div className="report-grid">
+        <article className="panel report-card">
+          <FileText size={34} />
+          <h2>Reporte ejecutivo</h2>
+          <p>Inversion {money(report.spend)} · ROAS {report.roas}x · Score {report.accountScore}/100</p>
+          <button>Exportar PDF</button>
+        </article>
+        <article className="panel report-card">
+          <BarChart3 size={34} />
+          <h2>Reporte cliente</h2>
+          <p>Resumen listo para compartir con resultados, acciones y proximos pasos.</p>
+          <button>Exportar CSV</button>
+        </article>
+      </div>
+      <section className="panel">
+        <h2>Compatibilidad Meta Ads AI Connectors</h2>
+        <div className="connector-list">
+          {connectorPrinciples.map((item) => <p key={item}>{item}</p>)}
+        </div>
+      </section>
+    </section>
+  );
+}

@@ -1,0 +1,27 @@
+# Normalize line endings: LF in the repo, native on checkout.
+* text=auto eol=lf
+
+# Binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.tgz binary
+*.docx binary
+*.xlsx binary
+*.pptx binary
+
+# Linguistic / vendored
+node_modules/** linguist-vendored
+dist/** linguist-generated
+build/** linguist-generated
+*.lock linguist-generated
+package-lock.json linguist-generated
+pnpm-lock.yaml linguist-generated
+
+# Prisma migrations should diff cleanly
+*.sql text eol=lf
+*.prisma text eol=lf

@@ -1,0 +1,413 @@
+// Pulse schema — Fase 0
+// Covers: identity, organizations, Meta connections, snapshotted ad data, policies,
+// recommendations/decisions, action execution log, audit log, notifications.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Identity & tenancy ----------
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String?
+  avatarUrl     String?
+  passwordHash  String? // populated when not using SSO
+  emailVerified DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  memberships   Membership[]
+  sessions      Session[]
+  auditEvents   AuditEvent[]
+  notifications Notification[]
+
+  @@index([createdAt])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userAgent String?
+  ip        String?
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Organization {
+  id            String           @id @default(cuid())
+  slug          String           @unique
+  name          String
+  plan          PlanTier         @default(FREE)
+  status        OrgStatus        @default(ACTIVE)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  memberships   Membership[]
+  metaAccounts  MetaAdAccount[]
+  connections   MetaConnection[]
+  campaigns     CampaignSnapshot[]
+  policies      Policy[]
+  recommendations Recommendation[]
+  decisions     Decision[]
+  actions       ActionLog[]
+  auditEvents   AuditEvent[]
+  notifications Notification[]
+
+  @@index([createdAt])
+}
+
+model Membership {
+  id             String         @id @default(cuid())
+  userId         String
+  organizationId String
+  role           OrgRole        @default(VIEWER)
+  invitedAt      DateTime?
+  acceptedAt     DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+// ---------- Meta integration ----------
+
+model MetaConnection {
+  id                String         @id @default(cuid())
+  organizationId    String
+  organization      Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  metaUserId        String
+  scopeTier         MetaScopeTier  @default(READ)
+  accessTokenEnc    String // encrypted at rest
+  refreshTokenEnc   String? // encrypted at rest
+  tokenExpiresAt    DateTime?
+  status            ConnectionStatus @default(ACTIVE)
+  lastSyncAt        DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  accounts          MetaAdAccount[]
+
+  @@unique([organizationId, metaUserId])
+  @@index([status])
+}
+
+model MetaAdAccount {
+  id              String         @id @default(cuid())
+  organizationId  String
+  connectionId    String
+  metaAccountId   String // e.g. act_1234567890
+  name            String
+  currency        String
+  timezoneName    String
+  businessId      String?
+  status          String
+  enabled         Boolean        @default(true)
+  lastSyncAt      DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  connection      MetaConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  campaigns       CampaignSnapshot[]
+
+  @@unique([organizationId, metaAccountId])
+  @@index([connectionId])
+}
+
+// ---------- Campaign snapshots ----------
+
+model CampaignSnapshot {
+  id              String         @id @default(cuid())
+  organizationId  String
+  accountId       String
+  metaCampaignId  String
+  name            String
+  objective       String
+  status          String
+  effectiveStatus String?
+  dailyBudget     Decimal?       @db.Decimal(14, 2)
+  lifetimeBudget  Decimal?       @db.Decimal(14, 2)
+  spend           Decimal        @default(0) @db.Decimal(14, 2)
+  results         Int            @default(0)
+  cpa             Decimal?       @db.Decimal(14, 4)
+  roas            Decimal?       @db.Decimal(14, 4)
+  ctr             Decimal?       @db.Decimal(8, 4)
+  cpm             Decimal?       @db.Decimal(14, 4)
+  frequency       Decimal?       @db.Decimal(8, 4)
+  phase           String?
+  critical        Boolean        @default(false)
+  learningLimited Boolean        @default(false)
+  windowStart     DateTime
+  windowEnd       DateTime
+  rawJson         Json?
+  capturedAt      DateTime       @default(now())
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  account         MetaAdAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  dailyMetrics    DailyMetricSnapshot[]
+
+  @@unique([accountId, metaCampaignId, windowStart, windowEnd])
+  @@index([organizationId, capturedAt])
+}
+
+model DailyMetricSnapshot {
+  id              String           @id @default(cuid())
+  campaignId      String
+  campaign        CampaignSnapshot @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  date            DateTime         @db.Date
+  spend           Decimal          @default(0) @db.Decimal(14, 2)
+  results         Int              @default(0)
+  cpa             Decimal?         @db.Decimal(14, 4)
+  roas            Decimal?         @db.Decimal(14, 4)
+  ctr             Decimal?         @db.Decimal(8, 4)
+  cpm             Decimal?         @db.Decimal(14, 4)
+  conversions     Int              @default(0)
+  frequency       Decimal?         @db.Decimal(8, 4)
+  impressions     BigInt?
+  clicks          BigInt?
+
+  @@unique([campaignId, date])
+  @@index([date])
+}
+
+// ---------- Policies, recommendations & decisions ----------
+
+model Policy {
+  id                              String       @id @default(cuid())
+  organizationId                  String
+  organization                    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name                            String       @default("Default")
+  mode                            OperationMode @default(ASSISTED)
+  targetCpa                       Decimal      @db.Decimal(14, 2)
+  targetRoas                      Decimal      @db.Decimal(8, 2)
+  maxDailyBudgetIncreasePercent   Int          @default(20)
+  maxDailySpend                   Decimal      @default(0) @db.Decimal(14, 2)
+  maxDailyChanges                 Int          @default(8)
+  killSwitch                      Boolean      @default(false)
+  blockedCriticalCampaigns        Boolean      @default(true)
+  createdAt                       DateTime     @default(now())
+  updatedAt                       DateTime     @updatedAt
+
+  @@index([organizationId])
+}
+
+model Recommendation {
+  id              String           @id @default(cuid())
+  organizationId  String
+  accountId       String?
+  campaignId      String?
+  type            RecommendationType
+  severity        Severity
+  rule            String
+  title           String
+  description     String
+  expectedImpact  String
+  budgetDeltaPercent Int?
+  requiresApproval Boolean         @default(true)
+  status          RecommendationStatus @default(OPEN)
+  createdAt       DateTime         @default(now())
+  expiresAt       DateTime?
+  resolvedAt      DateTime?
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  decision        Decision?
+
+  @@index([organizationId, status])
+  @@index([campaignId])
+}
+
+model Decision {
+  id                String          @id @default(cuid())
+  organizationId    String
+  recommendationId  String          @unique
+  decidedBy         DecisionAuthor
+  decidedByUserId   String?
+  outcome           DecisionOutcome
+  notes             String?
+  decidedAt         DateTime        @default(now())
+  organization      Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  recommendation    Recommendation  @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  action            ActionLog?
+
+  @@index([organizationId, decidedAt])
+}
+
+// ---------- Action execution & audit ----------
+
+model ActionLog {
+  id              String         @id @default(cuid())
+  organizationId  String
+  decisionId      String?        @unique
+  campaignId      String?
+  type            String // RecommendationType serialized
+  provider        String // ads-cli | ads-mcp | marketing-api | mock
+  tool            String? // e.g. ads_update_entity
+  dryRun          Boolean        @default(false)
+  status          ActionStatus   @default(PENDING)
+  payload         Json
+  result          Json?
+  errorMessage    String?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  durationMs      Int?
+  createdAt       DateTime       @default(now())
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  decision        Decision?      @relation(fields: [decisionId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([status])
+}
+
+model AuditEvent {
+  id              String         @id @default(cuid())
+  organizationId  String?
+  userId          String?
+  type            String // e.g. user.login, meta.connection.created, action.executed
+  severity        AuditSeverity  @default(INFO)
+  message         String
+  metadata        Json?
+  ip              String?
+  userAgent       String?
+  createdAt       DateTime       @default(now())
+  organization    Organization?  @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  user            User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([type])
+}
+
+// ---------- Notifications ----------
+
+model Notification {
+  id              String         @id @default(cuid())
+  organizationId  String
+  userId          String?
+  channel         NotificationChannel @default(IN_APP)
+  category        String // alert | recommendation | report | system
+  title           String
+  body            String
+  href            String?
+  read            Boolean        @default(false)
+  sentAt          DateTime?
+  createdAt       DateTime       @default(now())
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user            User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, read])
+  @@index([userId])
+}
+
+// ---------- Enums ----------
+
+enum PlanTier {
+  FREE
+  SOLO
+  AGENCY
+  SCALE
+}
+
+enum OrgStatus {
+  ACTIVE
+  SUSPENDED
+  CANCELED
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  ANALYST
+  VIEWER
+}
+
+enum MetaScopeTier {
+  READ
+  READ_WRITE
+  READ_WRITE_FINANCE
+}
+
+enum ConnectionStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+  ERROR
+}
+
+enum OperationMode {
+  READ
+  ASSISTED
+  AUTOPILOT
+}
+
+enum RecommendationType {
+  SCALE_BUDGET
+  REDUCE_BUDGET
+  PAUSE_AD
+  DUPLICATE_WINNER
+  ROTATE_CREATIVE
+  EXPAND_AUDIENCE
+  SIMPLIFY_STRUCTURE
+  CONSOLIDATE_BUDGET
+  REVIEW_LANDING
+  AUDIT_TRACKING
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum RecommendationStatus {
+  OPEN
+  APPROVED
+  REJECTED
+  EXECUTED
+  EXPIRED
+}
+
+enum DecisionAuthor {
+  USER
+  AUTOPILOT
+  SYSTEM
+}
+
+enum DecisionOutcome {
+  APPROVED
+  REJECTED
+  AUTO_EXECUTED
+  DEFERRED
+}
+
+enum ActionStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+  CANCELED
+  DRY_RUN
+}
+
+enum AuditSeverity {
+  INFO
+  WARN
+  ERROR
+  CRITICAL
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SLACK
+  WHATSAPP
+}
