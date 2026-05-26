@@ -11,6 +11,9 @@ import { CampaignWizard } from "./agents/pulse/components/CampaignWizard";
 import { DashboardCharts } from "./agents/pulse/components/DashboardCharts";
 import { ModeControl } from "./agents/pulse/components/ModeControl";
 import { AutopilotPanel } from "./agents/pulse/components/AutopilotPanel";
+import { MetaConnectionPanel } from "./agents/pulse/components/MetaConnectionPanel";
+import { useMetaConnection } from "./agents/pulse/hooks/useMetaConnection";
+import { useCampaigns } from "./agents/pulse/hooks/useCampaigns";
 import type { OperationMode } from "@pulse/shared";
 import { metaConnectorPrinciples } from "@pulse/shared";
 
@@ -33,19 +36,25 @@ export function App() {
   const [mode, setMode] = useState<OperationMode>("assisted");
   const [section, setSection] = useState<Section>("inicio");
   const [policy, setPolicy] = useState(defaultPolicy);
-  const plan = useMemo(() => createOptimizationPlan(mockCampaigns, policy), [policy]);
-  const autopilot = useMemo(() => runPulseAutopilot({ campaigns: mockCampaigns, mode, policy }), [mode, policy]);
-  const audit = useMemo(() => auditAccount(mockCampaigns, plan.alerts), [plan.alerts]);
-  const report = useMemo(() => buildExecutiveReport(mockCampaigns, plan), [plan]);
 
-  const spend = mockCampaigns.reduce((sum, item) => sum + item.spend, 0);
-  const results = mockCampaigns.reduce((sum, item) => sum + item.results, 0);
-  const leads = mockCampaigns.filter((item) => item.objective === "Leads").reduce((sum, item) => sum + item.results, 0);
-  const sales = mockCampaigns.filter((item) => item.objective === "Ventas").reduce((sum, item) => sum + item.results, 0);
+  const metaState = useMetaConnection();
+  const liveCampaigns = useCampaigns({ enabled: Boolean(metaState.activeConnection) });
+  const campaigns = liveCampaigns.campaigns.length > 0 ? liveCampaigns.campaigns : mockCampaigns;
+  const usingLiveData = liveCampaigns.campaigns.length > 0;
+
+  const plan = useMemo(() => createOptimizationPlan(campaigns, policy), [campaigns, policy]);
+  const autopilot = useMemo(() => runPulseAutopilot({ campaigns, mode, policy }), [campaigns, mode, policy]);
+  const audit = useMemo(() => auditAccount(campaigns, plan.alerts), [campaigns, plan.alerts]);
+  const report = useMemo(() => buildExecutiveReport(campaigns, plan), [campaigns, plan]);
+
+  const spend = campaigns.reduce((sum, item) => sum + item.spend, 0);
+  const results = campaigns.reduce((sum, item) => sum + item.results, 0);
+  const leads = campaigns.filter((item) => item.objective === "Leads").reduce((sum, item) => sum + item.results, 0);
+  const sales = campaigns.filter((item) => item.objective === "Ventas").reduce((sum, item) => sum + item.results, 0);
   const avgRoas = report.roas;
   const avgCpa = Math.round(spend / Math.max(results, 1));
-  const avgCtr = Number((mockCampaigns.reduce((sum, item) => sum + item.ctr, 0) / mockCampaigns.length).toFixed(2));
-  const avgCpm = Number((mockCampaigns.reduce((sum, item) => sum + item.cpm, 0) / mockCampaigns.length).toFixed(2));
+  const avgCtr = Number((campaigns.reduce((sum, item) => sum + item.ctr, 0) / Math.max(campaigns.length, 1)).toFixed(2));
+  const avgCpm = Number((campaigns.reduce((sum, item) => sum + item.cpm, 0) / Math.max(campaigns.length, 1)).toFixed(2));
 
   return (
     <div className="pulse-shell">
@@ -62,9 +71,19 @@ export function App() {
 
         <div className="account-box">
           <span>Cuenta publicitaria</span>
-          <strong>Edi Business Account</strong>
-          <small>ID: 238475928374895</small>
-          <em>Conectado a Meta Ads</em>
+          {metaState.activeConnection?.accounts[0] ? (
+            <>
+              <strong>{metaState.activeConnection.accounts[0].name}</strong>
+              <small>ID: {metaState.activeConnection.accounts[0].metaAccountId}</small>
+              <em>Conectado a Meta Ads · {metaState.activeConnection.accounts.length} cuentas</em>
+            </>
+          ) : (
+            <>
+              <strong>Sin conexión activa</strong>
+              <small>Pulse usa datos demo</small>
+              <em>Conecta Meta para datos reales</em>
+            </>
+          )}
         </div>
 
         <nav className="nav-list">
@@ -110,21 +129,27 @@ export function App() {
           <Metric icon={AlertTriangle} label="CPA promedio" value={money(avgCpa)} change="+12.3%" tone="bad" />
           <Metric icon={Sparkles} label="ROAS" value={`${avgRoas}x`} change="+33.3%" tone="good" />
           <Metric icon={Layers3} label="CTR / CPM" value={`${avgCtr}% / $${avgCpm}`} change="+8.4%" tone="good" />
-          <Metric icon={Megaphone} label="Campanas activas" value="17" change={`${plan.alerts.length} alertas`} tone="warn" />
+          <Metric icon={Megaphone} label="Campanas activas" value={String(campaigns.filter((c) => c.status === "active").length)} change={`${plan.alerts.length} alertas`} tone="warn" />
         </section>
 
         {section === "inicio" && (
           <div className="dashboard-grid">
+            <MetaConnectionPanel state={metaState} />
+            {!usingLiveData && (
+              <p className="muted-banner">
+                Mostrando datos demo. Conecta una cuenta de Meta para ver campañas reales.
+              </p>
+            )}
             <DashboardCharts trend={accountTrend} leads={leads} sales={sales} />
             <AlertsPanel plan={plan} />
-            <CampaignTable campaigns={mockCampaigns} compact />
+            <CampaignTable campaigns={campaigns} compact />
             <AutopilotPanel mode={mode} policy={policy} result={autopilot} onPolicyChange={setPolicy} />
             <RecommendationsPanel plan={plan} />
             <ActivityPanel />
           </div>
         )}
 
-        {section === "campanas" && <CampaignTable campaigns={mockCampaigns} />}
+        {section === "campanas" && <CampaignTable campaigns={campaigns} />}
         {section === "autopilot" && <AutopilotPanel mode={mode} policy={policy} result={autopilot} onPolicyChange={setPolicy} expanded />}
         {section === "chat" && <ChatPulse mode={mode} recommendations={plan.recommendations} />}
         {section === "auditoria" && <AuditView audit={audit} />}

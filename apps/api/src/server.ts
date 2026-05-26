@@ -7,6 +7,10 @@ import { loadEnv } from "./lib/env.js";
 import { logger } from "./lib/logger.js";
 import { healthRoutes } from "./routes/health.js";
 import { metaRoutes } from "./routes/meta.js";
+import { connectionRoutes } from "./routes/connections.js";
+import { syncRoutes } from "./routes/sync.js";
+import { campaignRoutes } from "./routes/campaigns.js";
+import { startScheduler, stopScheduler } from "./jobs/scheduler.js";
 
 export async function buildServer() {
   const env = loadEnv();
@@ -30,6 +34,9 @@ export async function buildServer() {
 
   await app.register(healthRoutes, { prefix: "/" });
   await app.register(metaRoutes, { prefix: "/v1" });
+  await app.register(connectionRoutes, { prefix: "/v1" });
+  await app.register(syncRoutes, { prefix: "/v1" });
+  await app.register(campaignRoutes, { prefix: "/v1" });
 
   app.setErrorHandler((error, _req, reply) => {
     app.log.error({ err: error }, "Unhandled error");
@@ -50,6 +57,15 @@ async function start() {
   try {
     await app.listen({ host: env.HOST, port: env.PORT });
     app.log.info(`Pulse API listening on http://${env.HOST}:${env.PORT}`);
+    startScheduler();
+    const shutdown = async (signal: string) => {
+      app.log.info({ signal }, "Shutting down");
+      stopScheduler();
+      await app.close();
+      process.exit(0);
+    };
+    process.on("SIGINT", () => void shutdown("SIGINT"));
+    process.on("SIGTERM", () => void shutdown("SIGTERM"));
   } catch (error) {
     app.log.error({ err: error }, "Failed to start server");
     process.exit(1);

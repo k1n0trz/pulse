@@ -19,10 +19,10 @@ pulse/
 
 | Phase | Scope | State |
 |---|---|---|
-| **0** | Monorepo, backend skeleton, Prisma schema, shared types, CI | ✅ In this commit |
-| 1 | Real Meta integration (OAuth + Ads CLI/MCP adapters + sync jobs) | ⏳ Next |
-| 2 | AI brain (Claude tool calling, streaming chat, learning loop) | — |
-| 3 | Multi-tenant auth, scheduler, notifications, audit log | — |
+| **0** | Monorepo, backend skeleton, Prisma schema, shared types, CI | ✅ |
+| **1** | Real Meta OAuth + Marketing API client + sync jobs + frontend connect flow | ✅ |
+| 2 | AI brain (Claude tool calling, streaming chat, learning loop) | ⏳ Next |
+| 3 | Multi-tenant auth, BullMQ scheduler, notifications, audit UI | — |
 | 4 | Reports (PDF / CSV / XLSX), dashboards, polished UX | — |
 | 5 | Landing, Stripe billing, legal pack | — |
 | 6 | Closed beta → launch | — |
@@ -44,7 +44,7 @@ pnpm install
 
 # 3. Configure env
 cp .env.example .env
-# edit .env with your DATABASE_URL (Neon or Supabase connection string)
+# edit .env — see docs/META_SETUP.md for Meta credentials
 
 # 4. Generate Prisma client + create tables
 pnpm db:generate
@@ -55,6 +55,8 @@ pnpm dev
 ```
 
 The web app runs on `http://127.0.0.1:5173`; the API on `http://127.0.0.1:4000`.
+
+To connect a real Meta account, follow [`docs/META_SETUP.md`](docs/META_SETUP.md) (~20 min, one-time).
 
 ## Useful commands
 
