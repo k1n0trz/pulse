@@ -92,3 +92,12 @@ temp/
 # --- Legacy artifacts kept locally (not pushed) ---
 DIAGNOSTICO_PULSE.docx
 gen-report.js
+
+# --- Local credential drops (NEVER commit) ---
+docs/DATABASE_URL.txt
+docs/metaapi.txt
+docs/*credentials*
+docs/*secrets*
+docs/*.txt
+**/credentials.json
+**/secrets.json

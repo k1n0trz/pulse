@@ -79,7 +79,7 @@ export async function graphRequest<T>(path: string, init: GraphRequestInit): Pro
   const url = buildUrl(path, query, accessToken, appsecretProofSecret);
 
   const headers: Record<string, string> = { Accept: "application/json" };
-  let payload: BodyInit | undefined;
+  let payload: string | undefined;
   if (body && method !== "GET") {
     headers["Content-Type"] = "application/json";
     payload = JSON.stringify(body);

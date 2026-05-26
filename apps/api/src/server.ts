@@ -1,4 +1,4 @@
-import Fastify from "fastify";
+import Fastify, { type FastifyError } from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
@@ -38,7 +38,7 @@ export async function buildServer() {
   await app.register(syncRoutes, { prefix: "/v1" });
   await app.register(campaignRoutes, { prefix: "/v1" });
 
-  app.setErrorHandler((error, _req, reply) => {
+  app.setErrorHandler((error: FastifyError, _req, reply) => {
     app.log.error({ err: error }, "Unhandled error");
     const status = error.statusCode ?? 500;
     return reply.code(status).send({

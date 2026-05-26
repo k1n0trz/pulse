@@ -48,9 +48,3 @@ export function prepareAdsCliCommand(config: AdsCliAdapterConfig, recommendation
   return template(recommendation);
 }
 
-export const metaConnectorPrinciples = [
-  "No se hardcodean endpoints de Meta Marketing API.",
-  "Ads CLI/MCP se integran por adaptadores configurables cuando la instalacion oficial este autenticada.",
-  "Toda mutacion pasa por modo operativo, politicas de riesgo, auditoria y registro de aprendizaje.",
-  "Campanas nuevas, anuncios nuevos y cambios masivos quedan bloqueados sin aprobacion humana."
-];

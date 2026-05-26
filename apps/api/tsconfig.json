@@ -11,6 +11,5 @@
     "composite": false,
     "declaration": false
   },
-  "include": ["src", "prisma"],
-  "references": [{ "path": "../../packages/shared" }]
+  "include": ["src"]
 }
