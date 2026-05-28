@@ -22,7 +22,8 @@ pulse/
 | **0** | Monorepo, backend skeleton, Prisma schema, shared types, CI | ✅ |
 | **1** | Real Meta OAuth + Marketing API client + sync jobs + frontend connect flow | ✅ |
 | **2** | AI brain (Claude Opus 4.7 tool calling, SSE chat, anomaly detection, recommendation persistence) | ✅ |
-| 3 | Multi-tenant auth, BullMQ scheduler, notifications, audit UI | ⏳ Next |
+| **3a** | Approval queue, audit log UI, BullMQ scaffolding, notifications domain | ✅ |
+| 3b | Multi-tenant auth (Clerk), email via Resend, Redis-backed jobs | ⏳ Next (needs API keys) |
 | 4 | Reports (PDF / CSV / XLSX), dashboards, polished UX | — |
 | 5 | Landing, Stripe billing, legal pack | — |
 | 6 | Closed beta → launch | — |

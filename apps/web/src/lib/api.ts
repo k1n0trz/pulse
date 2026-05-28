@@ -120,8 +120,103 @@ export const api = {
 
   ai: {
     config: () => request<{ configured: boolean; model: string }>("/v1/ai/config")
+  },
+
+  recommendations: {
+    list: (params?: { organizationId?: string; status?: "OPEN" | "APPROVED" | "REJECTED" | "EXECUTED" | "EXPIRED"; severity?: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.organizationId) q.set("organizationId", params.organizationId);
+      if (params?.status) q.set("status", params.status);
+      if (params?.severity) q.set("severity", params.severity);
+      if (params?.limit) q.set("limit", String(params.limit));
+      return request<{ ok: boolean; count: number; recommendations: RecommendationDTO[] }>(
+        `/v1/recommendations${q.toString() ? `?${q.toString()}` : ""}`
+      );
+    },
+    approve: (id: string, opts: { execute?: boolean; notes?: string } = {}) =>
+      request<{ ok: boolean; decisionId: string; executed: boolean }>(`/v1/recommendations/${id}/approve`, {
+        method: "POST",
+        body: JSON.stringify(opts)
+      }),
+    reject: (id: string, opts: { notes?: string } = {}) =>
+      request<{ ok: boolean; decisionId: string }>(`/v1/recommendations/${id}/reject`, {
+        method: "POST",
+        body: JSON.stringify(opts)
+      })
+  },
+
+  audit: {
+    list: (params?: { organizationId?: string; type?: string; severity?: "INFO" | "WARN" | "ERROR" | "CRITICAL"; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.organizationId) q.set("organizationId", params.organizationId);
+      if (params?.type) q.set("type", params.type);
+      if (params?.severity) q.set("severity", params.severity);
+      if (params?.limit) q.set("limit", String(params.limit));
+      return request<{ ok: boolean; count: number; events: AuditEventDTO[] }>(
+        `/v1/audit-events${q.toString() ? `?${q.toString()}` : ""}`
+      );
+    }
+  },
+
+  notifications: {
+    list: (params?: { organizationId?: string; unreadOnly?: boolean; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.organizationId) q.set("organizationId", params.organizationId);
+      if (params?.unreadOnly) q.set("unreadOnly", "true");
+      if (params?.limit) q.set("limit", String(params.limit));
+      return request<{ ok: boolean; count: number; notifications: NotificationDTO[] }>(
+        `/v1/notifications${q.toString() ? `?${q.toString()}` : ""}`
+      );
+    },
+    markRead: (id: string) => request<{ ok: boolean }>(`/v1/notifications/${id}/read`, { method: "POST" }),
+    markAllRead: () => request<{ ok: boolean; updated: number }>("/v1/notifications/read-all", { method: "POST", body: "{}" })
   }
 };
+
+export interface RecommendationDTO {
+  id: string;
+  organizationId: string;
+  campaignId: string | null;
+  type: string;
+  severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  rule: string;
+  title: string;
+  description: string;
+  expectedImpact: string;
+  budgetDeltaPercent: number | null;
+  requiresApproval: boolean;
+  status: "OPEN" | "APPROVED" | "REJECTED" | "EXECUTED" | "EXPIRED";
+  createdAt: string;
+  resolvedAt: string | null;
+  decision: { id: string; outcome: string; decidedAt: string; notes: string | null } | null;
+}
+
+export interface AuditEventDTO {
+  id: string;
+  organizationId: string | null;
+  userId: string | null;
+  type: string;
+  severity: "INFO" | "WARN" | "ERROR" | "CRITICAL";
+  message: string;
+  metadata: unknown;
+  ip: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
+export interface NotificationDTO {
+  id: string;
+  organizationId: string;
+  userId: string | null;
+  channel: "IN_APP" | "EMAIL" | "SLACK" | "WHATSAPP";
+  category: string;
+  title: string;
+  body: string;
+  href: string | null;
+  read: boolean;
+  sentAt: string | null;
+  createdAt: string;
+}
 
 // ---------- Chat streaming ----------
 

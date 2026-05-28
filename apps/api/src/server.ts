@@ -12,7 +12,11 @@ import { connectionRoutes } from "./routes/connections.js";
 import { syncRoutes } from "./routes/sync.js";
 import { campaignRoutes } from "./routes/campaigns.js";
 import { chatRoutes } from "./routes/chat.js";
+import { recommendationRoutes } from "./routes/recommendations.js";
+import { auditRoutes } from "./routes/auditEvents.js";
+import { notificationRoutes } from "./routes/notifications.js";
 import { startScheduler, stopScheduler } from "./jobs/scheduler.js";
+import { shutdownQueue } from "./jobs/queue.js";
 
 export async function buildServer() {
   const env = loadEnv();
@@ -40,6 +44,9 @@ export async function buildServer() {
   await app.register(syncRoutes, { prefix: "/v1" });
   await app.register(campaignRoutes, { prefix: "/v1" });
   await app.register(chatRoutes, { prefix: "/v1" });
+  await app.register(recommendationRoutes, { prefix: "/v1" });
+  await app.register(auditRoutes, { prefix: "/v1" });
+  await app.register(notificationRoutes, { prefix: "/v1" });
 
   app.setErrorHandler((error: FastifyError, _req, reply) => {
     app.log.error({ err: error }, "Unhandled error");
@@ -64,6 +71,7 @@ async function start() {
     const shutdown = async (signal: string) => {
       app.log.info({ signal }, "Shutting down");
       stopScheduler();
+      await shutdownQueue();
       await app.close();
       process.exit(0);
     };

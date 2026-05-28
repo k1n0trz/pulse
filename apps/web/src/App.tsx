@@ -9,6 +9,8 @@ import { DashboardCharts } from "./agents/pulse/components/DashboardCharts";
 import { ModeControl } from "./agents/pulse/components/ModeControl";
 import { AutopilotPanel } from "./agents/pulse/components/AutopilotPanel";
 import { MetaConnectionPanel } from "./agents/pulse/components/MetaConnectionPanel";
+import { ApprovalQueue } from "./agents/pulse/components/ApprovalQueue";
+import { ActivityTimeline } from "./agents/pulse/components/ActivityTimeline";
 import { useMetaConnection } from "./agents/pulse/hooks/useMetaConnection";
 import { useCampaigns } from "./agents/pulse/hooks/useCampaigns";
 import type { OperationMode } from "@pulse/shared";
@@ -141,8 +143,9 @@ export function App() {
             <AlertsPanel plan={plan} />
             <CampaignTable campaigns={campaigns} compact />
             <AutopilotPanel mode={mode} policy={policy} result={autopilot} onPolicyChange={setPolicy} />
+            <ApprovalQueue status="OPEN" allowExecute={mode === "autopilot"} />
             <RecommendationsPanel plan={plan} />
-            <ActivityPanel />
+            <ActivityTimeline limit={15} />
           </div>
         )}
 
@@ -210,22 +213,6 @@ function RecommendationsPanel({ plan }: { plan: ReturnType<typeof createOptimiza
             <button>{item.requiresApproval ? "Aprobar" : "Ejecutar"}</button>
           </div>
         ))}
-      </div>
-    </section>
-  );
-}
-
-function ActivityPanel() {
-  return (
-    <section className="panel activity-panel">
-      <div className="panel-head">
-        <h2>Actividad reciente</h2>
-        <span>Live</span>
-      </div>
-      <div className="timeline">
-        <p><strong>Pulse escalo presupuesto</strong><span>Remarketing 7 dias +15%</span></p>
-        <p><strong>Auditoria detecto fatiga</strong><span>Interes Frio 25-65</span></p>
-        <p><strong>Simulacion lista</strong><span>5 acciones pendientes</span></p>
       </div>
     </section>
   );

@@ -47,6 +47,15 @@ const EnvSchema = z.object({
   // Anthropic (Fase 2)
   ANTHROPIC_API_KEY: z.string().optional(),
 
+  // Notifications & queues (Fase 3)
+  RESEND_API_KEY: z.string().optional(),
+  RESEND_FROM: z.string().default("Pulse <notifications@pulse.local>"),
+  REDIS_URL: z.string().optional(),
+  ENABLE_BULLMQ: z
+    .string()
+    .default("false")
+    .transform((v) => v.toLowerCase() === "true"),
+
   // CORS
   CORS_ORIGINS: z
     .string()

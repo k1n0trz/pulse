@@ -12,6 +12,7 @@ import { Prisma } from "@prisma/client";
 import { META_TOOLS, type OperationMode, type AutopilotPolicy, createOptimizationPlan, auditAccount } from "@pulse/shared";
 import { prisma } from "../db/prisma.js";
 import { detectAccountAnomalies } from "./anomalies.js";
+import { notifyRecommendationCreated } from "../services/notifications.js";
 import { MarketingApiConnector } from "../meta/connectors/marketingApi.js";
 import { decryptString } from "../lib/crypto.js";
 import { loadEnv } from "../lib/env.js";
@@ -331,6 +332,14 @@ const proposeAction: PulseTool = {
         requiresApproval: ctx.mode !== "autopilot",
         status: "OPEN"
       }
+    });
+
+    await notifyRecommendationCreated({
+      organizationId: ctx.organizationId,
+      recommendationId: recommendation.id,
+      severity,
+      title: String(input.title),
+      expectedImpact: String(input.expectedImpact)
     });
 
     return {

@@ -28,6 +28,7 @@
     "@fastify/sensible": "^6.0.0",
     "@prisma/client": "^5.22.0",
     "@pulse/shared": "workspace:*",
+    "bullmq": "^5.77.6",
     "dotenv": "^17.4.2",
     "fastify": "^5.0.0",
     "node-cron": "^3.0.3",
