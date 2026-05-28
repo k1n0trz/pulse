@@ -149,6 +149,66 @@ async function resolveDefaultOrgId(): Promise<string> {
   return org.id;
 }
 
+// "Bring-your-own-token" path: persist a long-lived access token directly.
+// Used when an operator already has a System User token or a long-lived user
+// token from Graph API Explorer / Business settings and wants to skip the
+// browser OAuth flow. Still validates the token via /debug_token so we know
+// who it belongs to, what scopes it carries, and when it expires.
+export interface ImportTokenInput {
+  accessToken: string;
+  organizationId?: string;
+}
+
+export async function importExistingToken(input: ImportTokenInput): Promise<CompleteOAuthResult> {
+  const cfg = requireMetaConfig();
+  const appToken = `${cfg.appId}|${cfg.appSecret}`;
+  const debug = await debugToken({ token: input.accessToken, appAccessToken: appToken });
+  if (!debug.data.is_valid) {
+    throw new Error("Token is not valid per debug_token");
+  }
+  if (debug.data.app_id !== cfg.appId) {
+    throw new Error(
+      `Token was issued for app ${debug.data.app_id} but Pulse is configured for app ${cfg.appId}.`
+    );
+  }
+
+  const metaUserId = debug.data.user_id;
+  const scopes = debug.data.scopes ?? [];
+  const expiresAt = debug.data.expires_at ? new Date(debug.data.expires_at * 1000) : null;
+  const organizationId = input.organizationId ?? (await resolveDefaultOrgId());
+  const scopeTier = inferScopeTier(scopes);
+
+  const connection = await prisma.metaConnection.upsert({
+    where: { organizationId_metaUserId: { organizationId, metaUserId } },
+    create: {
+      organizationId,
+      metaUserId,
+      scopeTier,
+      accessTokenEnc: encryptString(input.accessToken),
+      tokenExpiresAt: expiresAt,
+      status: "ACTIVE"
+    },
+    update: {
+      scopeTier,
+      accessTokenEnc: encryptString(input.accessToken),
+      tokenExpiresAt: expiresAt,
+      status: "ACTIVE"
+    }
+  });
+
+  await prisma.auditEvent.create({
+    data: {
+      organizationId,
+      type: "meta.connection.imported",
+      severity: "INFO",
+      message: `Meta connection imported via raw token for user ${metaUserId}`,
+      metadata: { scopes, expiresAt: expiresAt?.toISOString() } as Prisma.InputJsonValue
+    }
+  });
+
+  return { connectionId: connection.id, organizationId, metaUserId, scopes, expiresAt };
+}
+
 export async function revokeConnection(connectionId: string): Promise<void> {
   const { decryptString } = await import("../lib/crypto.js");
   const connection = await prisma.metaConnection.findUnique({ where: { id: connectionId } });

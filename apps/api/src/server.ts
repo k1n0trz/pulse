@@ -1,3 +1,4 @@
+import { pathToFileURL } from "node:url";
 import Fastify, { type FastifyError } from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
@@ -72,7 +73,8 @@ async function start() {
   }
 }
 
-const invokedDirectly = import.meta.url === `file://${process.argv[1]?.replace(/\\/g, "/")}`;
+const entry = process.argv[1];
+const invokedDirectly = entry ? import.meta.url === pathToFileURL(entry).href : false;
 if (invokedDirectly) {
   void start();
 }

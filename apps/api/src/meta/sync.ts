@@ -173,7 +173,7 @@ export async function syncCampaigns(accountDbId: string, opts: SyncCampaignsOpts
       ...a,
       query: {
         fields: "id,name,status,effective_status,objective,daily_budget,lifetime_budget,start_time,stop_time,buying_type",
-        effective_status: ["ACTIVE", "PAUSED", "WITH_ISSUES", "LIMITED"].join(",")
+        effective_status: JSON.stringify(["ACTIVE", "PAUSED", "WITH_ISSUES", "CAMPAIGN_PAUSED"])
       }
     },
     { limit: 200, maxPages: 10 }

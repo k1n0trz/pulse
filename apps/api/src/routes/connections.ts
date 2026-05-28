@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { prisma } from "../db/prisma.js";
-import { revokeConnection } from "../meta/oauth.js";
+import { importExistingToken, revokeConnection } from "../meta/oauth.js";
 
 const ListQuery = z.object({
   organizationId: z.string().optional()
@@ -54,6 +54,23 @@ export const connectionRoutes: FastifyPluginAsync = async (app) => {
     const { accessTokenEnc: _a, refreshTokenEnc: _r, ...safe } = connection;
     void _a; void _r;
     return { ok: true, connection: safe };
+  });
+
+  const ImportBody = z.object({
+    accessToken: z.string().min(20),
+    organizationId: z.string().optional()
+  });
+
+  app.post("/connections/import", async (req, reply) => {
+    const parsed = ImportBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ ok: false, error: "invalid_body", issues: parsed.error.issues });
+    try {
+      const result = await importExistingToken(parsed.data);
+      return { ok: true, ...result };
+    } catch (error) {
+      app.log.error({ err: error }, "Token import failed");
+      return reply.code(400).send({ ok: false, error: "import_failed", message: (error as Error).message });
+    }
   });
 
   app.delete("/connections/:id", async (req, reply) => {
