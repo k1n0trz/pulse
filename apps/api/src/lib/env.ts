@@ -1,5 +1,9 @@
-import "dotenv/config";
+import { config as loadDotenv } from "dotenv";
 import { z } from "zod";
+
+// override:true so a .env value wins over an empty/stale shell variable
+// (this matters when running inside shells that pre-set ANTHROPIC_API_KEY="" etc.)
+loadDotenv({ override: true });
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
