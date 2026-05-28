@@ -159,6 +159,7 @@ export const api = {
   },
 
   notifications: {
+    config: () => request<{ onesignal: { configured: boolean; appId: string | null } }>("/v1/notifications/config"),
     list: (params?: { organizationId?: string; unreadOnly?: boolean; limit?: number }) => {
       const q = new URLSearchParams();
       if (params?.organizationId) q.set("organizationId", params.organizationId);
@@ -170,8 +171,29 @@ export const api = {
     },
     markRead: (id: string) => request<{ ok: boolean }>(`/v1/notifications/${id}/read`, { method: "POST" }),
     markAllRead: () => request<{ ok: boolean; updated: number }>("/v1/notifications/read-all", { method: "POST", body: "{}" })
+  },
+
+  me: {
+    get: () => request<{ ok: boolean; user: MeUserDTO; organization: { id: string; slug: string; name: string }; preferences: Array<{ id: string; category: string; channels: string[] }> }>("/v1/me"),
+    registerOneSignal: (externalUserId: string) =>
+      request<{ ok: boolean; oneSignalExternalId: string }>(`/v1/me/onesignal`, {
+        method: "POST",
+        body: JSON.stringify({ externalUserId })
+      }),
+    setPreference: (category: "alert" | "recommendation" | "report" | "system", channels: Array<"IN_APP" | "PUSH" | "EMAIL" | "SMS">) =>
+      request<{ ok: boolean }>(`/v1/me/preferences`, {
+        method: "POST",
+        body: JSON.stringify({ category, channels })
+      })
   }
 };
+
+export interface MeUserDTO {
+  id: string;
+  email: string;
+  name: string | null;
+  oneSignalExternalId: string | null;
+}
 
 export interface RecommendationDTO {
   id: string;

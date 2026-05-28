@@ -13,6 +13,7 @@ import { ApprovalQueue } from "./agents/pulse/components/ApprovalQueue";
 import { ActivityTimeline } from "./agents/pulse/components/ActivityTimeline";
 import { useMetaConnection } from "./agents/pulse/hooks/useMetaConnection";
 import { useCampaigns } from "./agents/pulse/hooks/useCampaigns";
+import { NotificationsButton } from "./agents/pulse/components/NotificationsButton";
 import type { OperationMode } from "@pulse/shared";
 import { metaConnectorPrinciples } from "@pulse/shared";
 
@@ -107,6 +108,7 @@ export function App() {
             <p>Rendimiento y ejecucion activa de campanas Meta Ads.</p>
           </div>
           <div className="topbar-actions">
+            <NotificationsButton />
             <button className="ghost-button">
               <CalendarDays size={16} />
               Ultimos 7 dias

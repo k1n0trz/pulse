@@ -21,12 +21,15 @@ model User {
   avatarUrl     String?
   passwordHash  String? // populated when not using SSO
   emailVerified DateTime?
+  // OneSignal external_user_id used to address this user across web push / email / sms
+  oneSignalExternalId String?  @unique
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   memberships   Membership[]
   sessions      Session[]
   auditEvents   AuditEvent[]
   notifications Notification[]
+  notificationPreferences NotificationPreference[]
 
   @@index([createdAt])
 }
@@ -299,12 +302,28 @@ model Notification {
   href            String?
   read            Boolean        @default(false)
   sentAt          DateTime?
+  // ID returned by OneSignal after successful dispatch (for delivery traceability)
+  oneSignalId     String?
+  // Channels actually attempted on dispatch (e.g. ["push","email"]) — empty for in_app only
+  dispatchedChannels String[]    @default([])
   createdAt       DateTime       @default(now())
   organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user            User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, read])
   @@index([userId])
+}
+
+model NotificationPreference {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    String // alert | recommendation | report | system
+  channels    String[] @default(["IN_APP"]) // any of IN_APP | EMAIL | PUSH | SMS
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, category])
 }
 
 // ---------- Enums ----------

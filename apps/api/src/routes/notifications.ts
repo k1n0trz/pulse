@@ -1,6 +1,9 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { prisma } from "../db/prisma.js";
+import { loadEnv } from "../lib/env.js";
+
+const env = loadEnv();
 
 const ListQuery = z.object({
   organizationId: z.string().optional(),
@@ -15,6 +18,13 @@ async function defaultOrgId(): Promise<string> {
 }
 
 export const notificationRoutes: FastifyPluginAsync = async (app) => {
+  app.get("/notifications/config", async () => ({
+    onesignal: {
+      configured: Boolean(env.ONESIGNAL_APP_ID),
+      appId: env.ONESIGNAL_APP_ID ?? null
+    }
+  }));
+
   app.get("/notifications", async (req, reply) => {
     const parsed = ListQuery.safeParse(req.query);
     if (!parsed.success) return reply.code(400).send({ ok: false, error: "invalid_query" });
