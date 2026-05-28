@@ -1,4 +1,4 @@
-import type { DecisionImpact, LearningDecisionInput } from "@pulse/shared";
+import type { DecisionImpact, LearningDecisionInput } from "./types.js";
 
 export function evaluateDecisionImpact(input: LearningDecisionInput): DecisionImpact {
   const cpaDelta = input.before.cpa === 0 ? 0 : (input.before.cpa - input.after.cpa) / input.before.cpa;

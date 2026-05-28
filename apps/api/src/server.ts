@@ -11,6 +11,7 @@ import { metaRoutes } from "./routes/meta.js";
 import { connectionRoutes } from "./routes/connections.js";
 import { syncRoutes } from "./routes/sync.js";
 import { campaignRoutes } from "./routes/campaigns.js";
+import { chatRoutes } from "./routes/chat.js";
 import { startScheduler, stopScheduler } from "./jobs/scheduler.js";
 
 export async function buildServer() {
@@ -38,6 +39,7 @@ export async function buildServer() {
   await app.register(connectionRoutes, { prefix: "/v1" });
   await app.register(syncRoutes, { prefix: "/v1" });
   await app.register(campaignRoutes, { prefix: "/v1" });
+  await app.register(chatRoutes, { prefix: "/v1" });
 
   app.setErrorHandler((error: FastifyError, _req, reply) => {
     app.log.error({ err: error }, "Unhandled error");

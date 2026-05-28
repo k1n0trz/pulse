@@ -1,10 +1,7 @@
 import { useMemo, useState } from "react";
 import { Activity, AlertTriangle, BarChart3, Bot, CalendarDays, FileText, Gauge, Layers3, Megaphone, Plus, ShieldCheck, Sparkles, Target, Zap } from "lucide-react";
 import { accountTrend, defaultPolicy, mockCampaigns } from "./agents/pulse/services/mockPulseData";
-import { createOptimizationPlan } from "./agents/pulse/optimizer/pulseOptimizer";
-import { runPulseAutopilot } from "./agents/pulse/autopilot/pulseAutopilot";
-import { auditAccount } from "./agents/pulse/audit/pulseAudit";
-import { buildExecutiveReport } from "./agents/pulse/reports/pulseReports";
+import { createOptimizationPlan, runPulseAutopilot, auditAccount, buildExecutiveReport } from "@pulse/shared";
 import { ChatPulse } from "./agents/pulse/components/ChatPulse";
 import { CampaignTable } from "./agents/pulse/components/CampaignTable";
 import { CampaignWizard } from "./agents/pulse/components/CampaignWizard";
@@ -151,7 +148,7 @@ export function App() {
 
         {section === "campanas" && <CampaignTable campaigns={campaigns} />}
         {section === "autopilot" && <AutopilotPanel mode={mode} policy={policy} result={autopilot} onPolicyChange={setPolicy} expanded />}
-        {section === "chat" && <ChatPulse mode={mode} recommendations={plan.recommendations} />}
+        {section === "chat" && <ChatPulse mode={mode} />}
         {section === "auditoria" && <AuditView audit={audit} />}
         {section === "reportes" && <ReportsView report={report} connectorPrinciples={metaConnectorPrinciples} />}
         {section === "wizard" && <CampaignWizard />}

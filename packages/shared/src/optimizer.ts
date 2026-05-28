@@ -1,4 +1,4 @@
-import type { AutopilotPolicy, Campaign, OptimizationPlan, PulseAlert, PulseRecommendation, Severity } from "@pulse/shared";
+import type { AutopilotPolicy, Campaign, OptimizationPlan, PulseAlert, PulseRecommendation, Severity } from "./types.js";
 
 const now = () => new Date().toISOString();
 const recent = (campaign: Campaign) => campaign.metrics.slice(-3);

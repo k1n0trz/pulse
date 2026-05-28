@@ -1,5 +1,5 @@
-import { createOptimizationPlan } from "../optimizer/pulseOptimizer";
-import type { AutopilotPolicy, Campaign, ExecutedAction, OperationMode, PulseRecommendation } from "@pulse/shared";
+import { createOptimizationPlan } from "./optimizer.js";
+import type { AutopilotPolicy, Campaign, ExecutedAction, OperationMode, PulseRecommendation } from "./types.js";
 
 export interface RunPulseAutopilotInput {
   campaigns: Campaign[];

@@ -116,7 +116,75 @@ export const api = {
         `/v1/campaigns${q.toString() ? `?${q.toString()}` : ""}`
       );
     }
+  },
+
+  ai: {
+    config: () => request<{ configured: boolean; model: string }>("/v1/ai/config")
   }
 };
+
+// ---------- Chat streaming ----------
+
+export type AgentStreamEvent =
+  | { type: "text_delta"; text: string }
+  | { type: "thinking"; text: string }
+  | { type: "tool_call"; toolUseId: string; name: string; input: Record<string, unknown> }
+  | { type: "tool_result"; toolUseId: string; name: string; ok: boolean; recommendationId?: string }
+  | { type: "stop"; reason: string }
+  | { type: "error"; message: string }
+  | { type: "done"; text: string; toolCalls: Array<{ name: string; ok: boolean; recommendationId?: string }>; usage: { input: number; output: number; cacheRead: number; cacheCreation: number } };
+
+export interface ChatStreamInput {
+  messages: Array<{ role: "user" | "assistant"; content: string }>;
+  mode: "read" | "assisted" | "autopilot";
+  organizationId?: string;
+}
+
+export async function streamChat(input: ChatStreamInput, onEvent: (event: AgentStreamEvent) => void, signal?: AbortSignal): Promise<void> {
+  const response = await fetch(`${BASE_URL}/v1/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+    body: JSON.stringify({ ...input, stream: true }),
+    signal
+  });
+  if (!response.ok || !response.body) {
+    const text = await response.text().catch(() => "");
+    throw new ApiError(text || response.statusText, response.status, text);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let sep: number;
+    while ((sep = buffer.indexOf("\n\n")) >= 0) {
+      const frame = buffer.slice(0, sep);
+      buffer = buffer.slice(sep + 2);
+
+      let eventName = "message";
+      const dataLines: string[] = [];
+      for (const line of frame.split(/\r?\n/)) {
+        if (line.startsWith("event:")) eventName = line.slice(6).trim();
+        else if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
+      }
+      if (dataLines.length === 0) continue;
+      try {
+        const data = JSON.parse(dataLines.join("\n"));
+        if (eventName === "done") {
+          onEvent({ type: "done", ...(data as { text: string; toolCalls: Array<{ name: string; ok: boolean; recommendationId?: string }>; usage: { input: number; output: number; cacheRead: number; cacheCreation: number } }) });
+        } else {
+          onEvent(data as AgentStreamEvent);
+        }
+      } catch {
+        // ignore malformed frames
+      }
+    }
+  }
+}
 
 export { BASE_URL as API_BASE_URL };

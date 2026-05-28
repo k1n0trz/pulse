@@ -1,4 +1,4 @@
-import type { Campaign, OptimizationPlan } from "@pulse/shared";
+import type { Campaign, OptimizationPlan } from "./types.js";
 
 export function buildExecutiveReport(campaigns: Campaign[], plan: OptimizationPlan) {
   const spend = campaigns.reduce((sum, item) => sum + item.spend, 0);

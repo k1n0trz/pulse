@@ -206,3 +206,34 @@ td span { color: var(--muted); font-size: 12px; margin-top: 3px; }
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
+
+/* ----- Chat panel (Fase 2) ----- */
+.chat-config-warn { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; background: #1a1207; border: 1px solid #b4530980; color: #fde68a; font-size: 13px; margin: 10px 0; }
+.chat-config-warn code { background: #00000060; padding: 2px 6px; border-radius: 4px; font-size: 12px; color: #fff; }
+
+.chat-bubbles { max-height: 60vh; overflow-y: auto; padding: 4px 2px; }
+.chat-empty { display: flex; align-items: center; gap: 10px; color: var(--muted); padding: 24px; border: 1px dashed var(--border); border-radius: 10px; }
+.chat-empty p { margin: 0; font-size: 13px; line-height: 1.5; }
+
+.bubble { padding: 12px 14px; border-radius: 10px; margin: 8px 0; max-width: 85%; }
+.bubble.user { background: linear-gradient(135deg, var(--purple-strong), #2c1b58); margin-left: auto; }
+.bubble.assistant { background: #121025; border: 1px solid var(--border); }
+.bubble .bubble-content { margin: 0; white-space: pre-wrap; line-height: 1.55; font-size: 14px; }
+
+.tool-trace { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.tool-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 999px; background: #0d0b1a; border: 1px solid var(--border); font-size: 11px; color: var(--lilac); }
+.tool-chip.ok { color: #6ee7b7; border-color: #16653480; }
+.tool-chip.pending { color: #fcd34d; border-color: #b4530980; }
+.tool-chip em { color: var(--muted); font-style: normal; font-size: 10px; }
+
+.prompt-row { display: flex; gap: 8px; margin-top: 12px; }
+.prompt-row input { flex: 1; background: #0d0b1a; border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 8px; font-size: 14px; }
+.prompt-row input:focus { outline: none; border-color: var(--purple); }
+.prompt-row input:disabled { opacity: 0.6; }
+.prompt-row button { background: var(--purple); border: 1px solid var(--purple-strong); color: white; padding: 0 16px; border-radius: 8px; min-width: 50px; }
+.prompt-row button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.quick-prompts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.quick-prompts button { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 6px 10px; border-radius: 999px; font-size: 12px; }
+.quick-prompts button:hover:not(:disabled) { border-color: var(--purple); color: var(--lilac); }
+.quick-prompts button:disabled { opacity: 0.4; cursor: not-allowed; }

@@ -1,6 +1,6 @@
 import { ShieldCheck, SlidersHorizontal, Zap } from "lucide-react";
 import type { AutopilotPolicy, OperationMode } from "@pulse/shared";
-import type { AutopilotRunResult } from "../autopilot/pulseAutopilot";
+import type { AutopilotRunResult } from "@pulse/shared";
 
 export function AutopilotPanel({ mode, policy, result, onPolicyChange, expanded = false }: { mode: OperationMode; policy: AutopilotPolicy; result: AutopilotRunResult; onPolicyChange: (policy: AutopilotPolicy) => void; expanded?: boolean }) {
   return (

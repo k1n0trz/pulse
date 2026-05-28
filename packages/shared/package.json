@@ -23,10 +23,12 @@
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "build": "tsc -b",
+    "test": "vitest run",
     "clean": "rimraf dist .turbo node_modules"
   },
   "devDependencies": {
     "rimraf": "^6.0.1",
-    "typescript": "^5.8.0"
+    "typescript": "^5.8.0",
+    "vitest": "^3.0.0"
   }
 }

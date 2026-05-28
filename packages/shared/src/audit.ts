@@ -1,4 +1,4 @@
-import type { Campaign, PulseAlert } from "@pulse/shared";
+import type { Campaign, PulseAlert } from "./types.js";
 
 export interface PulseAuditResult {
   score: number;
