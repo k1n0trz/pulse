@@ -11,6 +11,16 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: true,
-    target: "es2022"
+    target: "es2022",
+    rollupOptions: {
+      output: {
+        // Split heavy vendors into cacheable chunks so the main bundle stays small.
+        manualChunks: {
+          charts: ["recharts"],
+          icons: ["lucide-react"],
+          clerk: ["@clerk/clerk-react"]
+        }
+      }
+    }
   }
 });

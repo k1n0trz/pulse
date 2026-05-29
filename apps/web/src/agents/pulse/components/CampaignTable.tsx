@@ -77,12 +77,12 @@ export function CampaignTable({ campaigns, compact = false }: { campaigns: Campa
                 <td><span className={`phase ${campaign.phase}`}>{campaign.phase}</span></td>
                 <td>
                   <div className="action-icons">
-                    <button title="Analizar"><BarChart3 size={15} /></button>
-                    <button title="Editar"><Edit3 size={15} /></button>
-                    <button title="Duplicar"><Copy size={15} /></button>
-                    <button title={campaign.status === "paused" ? "Activar" : "Pausar"}>{campaign.status === "paused" ? <Play size={15} /> : <Pause size={15} />}</button>
-                    <button title="Escalar"><TrendingUp size={15} /></button>
-                    <button title="Mas"><MoreHorizontal size={15} /></button>
+                    <button title="Analizar" aria-label={`Analizar ${campaign.name}`}><BarChart3 size={15} /></button>
+                    <button title="Editar" aria-label={`Editar ${campaign.name}`}><Edit3 size={15} /></button>
+                    <button title="Duplicar" aria-label={`Duplicar ${campaign.name}`}><Copy size={15} /></button>
+                    <button title={campaign.status === "paused" ? "Activar" : "Pausar"} aria-label={`${campaign.status === "paused" ? "Activar" : "Pausar"} ${campaign.name}`}>{campaign.status === "paused" ? <Play size={15} /> : <Pause size={15} />}</button>
+                    <button title="Escalar" aria-label={`Escalar ${campaign.name}`}><TrendingUp size={15} /></button>
+                    <button title="Más opciones" aria-label={`Más opciones de ${campaign.name}`}><MoreHorizontal size={15} /></button>
                   </div>
                 </td>
               </tr>
