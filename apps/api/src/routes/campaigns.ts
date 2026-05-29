@@ -41,7 +41,10 @@ export const campaignRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.get("/insights/trend", async (req, reply) => {
-    const Query = z.object({ days: z.coerce.number().int().min(1).max(180).default(30) });
+    const Query = z.object({
+      accountId: z.string().optional(),
+      days: z.coerce.number().int().min(1).max(180).default(30)
+    });
     const parsed = Query.safeParse(req.query);
     if (!parsed.success) return reply.code(400).send({ ok: false, error: "invalid_query" });
     const { organizationId } = await req.getAuth();
@@ -50,7 +53,13 @@ export const campaignRoutes: FastifyPluginAsync = async (app) => {
     since.setUTCDate(since.getUTCDate() - parsed.data.days);
 
     const rows = await prisma.dailyMetricSnapshot.findMany({
-      where: { date: { gte: since }, campaign: { organizationId } },
+      where: {
+        date: { gte: since },
+        campaign: {
+          organizationId,
+          ...(parsed.data.accountId ? { accountId: parsed.data.accountId } : {})
+        }
+      },
       orderBy: { date: "asc" },
       select: { date: true, spend: true, results: true, conversions: true, roas: true, cpa: true }
     });

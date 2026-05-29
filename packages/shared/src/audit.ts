@@ -11,6 +11,18 @@ export interface PulseAuditResult {
 }
 
 export function auditAccount(campaigns: Campaign[], alerts: PulseAlert[]): PulseAuditResult {
+  if (campaigns.length === 0) {
+    return {
+      score: 0,
+      structure: 0,
+      tracking: 0,
+      creative: 0,
+      budget: 0,
+      audience: 0,
+      findings: ["Conecta una cuenta de Meta para generar una auditoria real."]
+    };
+  }
+
   const criticalAlerts = alerts.filter((item) => item.severity === "critical").length;
   const fatigued = campaigns.filter((item) => item.frequency > 3 || item.phase === "fatigued").length;
   const learningLimited = campaigns.filter((item) => item.learningLimited).length;

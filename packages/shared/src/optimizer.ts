@@ -41,6 +41,15 @@ function alert(campaign: Campaign, severity: Severity, rule: string, title: stri
 }
 
 export function createOptimizationPlan(campaigns: Campaign[], policy: AutopilotPolicy): OptimizationPlan {
+  if (campaigns.length === 0) {
+    return {
+      alerts: [],
+      recommendations: [],
+      accountScore: 0,
+      summary: "Sin datos de cuenta publicitaria conectada."
+    };
+  }
+
   const alerts: PulseAlert[] = [];
   const recommendations: PulseRecommendation[] = [];
 
