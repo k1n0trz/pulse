@@ -258,6 +258,38 @@ export interface NotificationDTO {
   createdAt: string;
 }
 
+// ---------- File downloads ----------
+
+/** Fetches a binary report with auth and triggers a browser download. */
+export async function downloadReport(path: string): Promise<void> {
+  const response = await fetch(`${BASE_URL}${path}`, {
+    headers: { ...(await authHeaders()) }
+  });
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new ApiError(text || response.statusText, response.status, text);
+  }
+  const blob = await response.blob();
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const match = /filename="?([^"]+)"?/.exec(disposition);
+  const filename = match?.[1] ?? "pulse-report";
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+export const reports = {
+  executivePdf: () => downloadReport("/v1/reports/executive?format=pdf"),
+  executiveXlsx: () => downloadReport("/v1/reports/executive?format=xlsx"),
+  campaignsCsv: () => downloadReport("/v1/reports/campaigns?format=csv"),
+  campaignsXlsx: () => downloadReport("/v1/reports/campaigns?format=xlsx")
+};
+
 // ---------- Chat streaming ----------
 
 export type AgentStreamEvent =

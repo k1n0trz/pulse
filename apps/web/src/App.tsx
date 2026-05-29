@@ -14,6 +14,7 @@ import { ActivityTimeline } from "./agents/pulse/components/ActivityTimeline";
 import { useMetaConnection } from "./agents/pulse/hooks/useMetaConnection";
 import { useCampaigns } from "./agents/pulse/hooks/useCampaigns";
 import { NotificationsButton } from "./agents/pulse/components/NotificationsButton";
+import { reports } from "./lib/api";
 import type { OperationMode } from "@pulse/shared";
 import { metaConnectorPrinciples } from "@pulse/shared";
 
@@ -259,6 +260,21 @@ function AuditView({ audit }: { audit: ReturnType<typeof auditAccount> }) {
 }
 
 function ReportsView({ report, connectorPrinciples }: { report: ReturnType<typeof buildExecutiveReport>; connectorPrinciples: string[] }) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async (key: string, fn: () => Promise<void>) => {
+    setBusy(key);
+    setError(null);
+    try {
+      await fn();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <section className="single-view">
       <div className="report-grid">
@@ -266,15 +282,30 @@ function ReportsView({ report, connectorPrinciples }: { report: ReturnType<typeo
           <FileText size={34} />
           <h2>Reporte ejecutivo</h2>
           <p>Inversion {money(report.spend)} · ROAS {report.roas}x · Score {report.accountScore}/100</p>
-          <button>Exportar PDF</button>
+          <div className="report-actions">
+            <button disabled={busy !== null} onClick={() => void run("pdf", reports.executivePdf)}>
+              {busy === "pdf" ? "Generando…" : "Exportar PDF"}
+            </button>
+            <button disabled={busy !== null} onClick={() => void run("xlsx", reports.executiveXlsx)}>
+              {busy === "xlsx" ? "Generando…" : "Exportar XLSX"}
+            </button>
+          </div>
         </article>
         <article className="panel report-card">
           <BarChart3 size={34} />
-          <h2>Reporte cliente</h2>
-          <p>Resumen listo para compartir con resultados, acciones y proximos pasos.</p>
-          <button>Exportar CSV</button>
+          <h2>Reporte de campañas</h2>
+          <p>Tabla completa de campañas con métricas, lista para compartir o analizar.</p>
+          <div className="report-actions">
+            <button disabled={busy !== null} onClick={() => void run("csv", reports.campaignsCsv)}>
+              {busy === "csv" ? "Generando…" : "Exportar CSV"}
+            </button>
+            <button disabled={busy !== null} onClick={() => void run("camp-xlsx", reports.campaignsXlsx)}>
+              {busy === "camp-xlsx" ? "Generando…" : "Exportar XLSX"}
+            </button>
+          </div>
         </article>
       </div>
+      {error && <p className="error-text">{error}</p>}
       <section className="panel">
         <h2>Compatibilidad Meta Ads AI Connectors</h2>
         <div className="connector-list">

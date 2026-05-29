@@ -280,3 +280,8 @@ td span { color: var(--muted); font-size: 12px; margin-top: 3px; }
 .auth-brand strong { display: block; font-size: 32px; letter-spacing: 1px; }
 .auth-brand span { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: 2px; }
 .ghost-button.is-on { border-color: var(--green); color: #6ee7b7; }
+
+.report-actions { display: flex; gap: 8px; margin-top: 12px; }
+.report-actions button { background: var(--purple); border: 1px solid var(--purple-strong); color: white; padding: 8px 14px; border-radius: 8px; font-size: 13px; }
+.report-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+.report-actions button:nth-child(2) { background: transparent; color: var(--lilac); }
