@@ -38,6 +38,32 @@ function money(value: number) {
   return `$${Math.round(value).toLocaleString("en-US")}`;
 }
 
+type TrendLike = { spend: number; results: number; roas: number; cpa: number };
+
+// Period-over-period: compares the first vs second half of the window.
+function periodDelta(points: TrendLike[], key: keyof TrendLike, mode: "sum" | "avg"): number | null {
+  if (points.length < 4) return null;
+  const mid = Math.floor(points.length / 2);
+  const a = points.slice(0, mid);
+  const b = points.slice(mid);
+  const agg = (arr: TrendLike[]) => {
+    const total = arr.reduce((s, p) => s + (Number(p[key]) || 0), 0);
+    return mode === "avg" ? total / Math.max(arr.length, 1) : total;
+  };
+  const prev = agg(a);
+  const curr = agg(b);
+  if (prev === 0) return null;
+  return ((curr - prev) / prev) * 100;
+}
+
+// Returns { caption, tone } for a metric card. higherIsBetter flips tone for CPA.
+function deltaCaption(pct: number | null, higherIsBetter = true): { caption: string; tone: "good" | "bad" | "warn" } {
+  if (pct === null) return { caption: "sin histórico suficiente", tone: "warn" };
+  const sign = pct > 0 ? "+" : "";
+  const improving = higherIsBetter ? pct >= 0 : pct < 0;
+  return { caption: `${sign}${pct.toFixed(1)}% vs periodo previo`, tone: improving ? "good" : "bad" };
+}
+
 export function App() {
   const [mode, setMode] = useState<OperationMode>("assisted");
   const [section, setSection] = useState<Section>("inicio");
@@ -63,6 +89,11 @@ export function App() {
   const avgCpa = Math.round(spend / Math.max(results, 1));
   const avgCtr = Number((campaigns.reduce((sum, item) => sum + item.ctr, 0) / Math.max(campaigns.length, 1)).toFixed(2));
   const avgCpm = Number((campaigns.reduce((sum, item) => sum + item.cpm, 0) / Math.max(campaigns.length, 1)).toFixed(2));
+
+  const dSpend = useMemo(() => deltaCaption(periodDelta(trend, "spend", "sum")), [trend]);
+  const dResults = useMemo(() => deltaCaption(periodDelta(trend, "results", "sum")), [trend]);
+  const dCpa = useMemo(() => deltaCaption(periodDelta(trend, "cpa", "avg"), false), [trend]);
+  const dRoas = useMemo(() => deltaCaption(periodDelta(trend, "roas", "avg")), [trend]);
 
   return (
     <div className="pulse-shell">
@@ -112,7 +143,7 @@ export function App() {
       <main className="workspace">
         <header className="topbar">
           <div>
-            <h1>Hola, Edi</h1>
+            <h1>{metaState.activeConnection?.accounts[0]?.name ? `Hola, ${metaState.activeConnection.accounts[0].name}` : "Resumen general"}</h1>
             <p>Rendimiento y ejecución activa de campañas Meta Ads.</p>
           </div>
           <div className="topbar-actions">
@@ -133,12 +164,12 @@ export function App() {
         </header>
 
         <section className="metric-grid">
-          <Metric icon={BarChart3} label="Inversión total" value={money(spend)} change="+18.7%" tone="good" />
-          <Metric icon={Target} label="Resultados" value={results.toLocaleString("en-US")} change="+23.5%" tone="good" />
-          <Metric icon={AlertTriangle} label="CPA promedio" value={money(avgCpa)} change="+12.3%" tone="bad" />
-          <Metric icon={Sparkles} label="ROAS" value={`${avgRoas}x`} change="+33.3%" tone="good" />
-          <Metric icon={Layers3} label="CTR / CPM" value={`${avgCtr}% / $${avgCpm}`} change="+8.4%" tone="good" />
-          <Metric icon={Megaphone} label="Campañas activas" value={String(campaigns.filter((c) => c.status === "active").length)} change={`${plan.alerts.length} alertas`} tone="warn" />
+          <Metric icon={BarChart3} label="Inversión total" value={money(spend)} change={dSpend.caption} tone={dSpend.tone} />
+          <Metric icon={Target} label="Resultados" value={results.toLocaleString("en-US")} change={dResults.caption} tone={dResults.tone} />
+          <Metric icon={AlertTriangle} label="CPA promedio" value={money(avgCpa)} change={dCpa.caption} tone={dCpa.tone} />
+          <Metric icon={Sparkles} label="ROAS" value={`${avgRoas}x`} change={dRoas.caption} tone={dRoas.tone} />
+          <Metric icon={Layers3} label="CTR / CPM" value={`${avgCtr}% / $${avgCpm}`} change="promedio de cuentas" tone="warn" />
+          <Metric icon={Megaphone} label="Campañas activas" value={String(campaigns.filter((c) => c.status === "active").length)} change={`${plan.alerts.length} alertas activas`} tone="warn" />
         </section>
 
         {section === "inicio" && (
@@ -185,7 +216,7 @@ function Metric({ icon: Icon, label, value, change, tone }: { icon: typeof Gauge
       </div>
       <span>{label}</span>
       <strong>{value}</strong>
-      <small className={tone}>{change} vs periodo previo</small>
+      <small className={tone}>{change}</small>
     </article>
   );
 }
