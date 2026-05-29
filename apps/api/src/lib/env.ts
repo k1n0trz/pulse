@@ -50,6 +50,15 @@ const EnvSchema = z.object({
   // Anthropic (Fase 2)
   ANTHROPIC_API_KEY: z.string().optional(),
 
+  // Billing (Fase 5) — Stripe. When unset, billing endpoints return not_configured.
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  STRIPE_PRICE_SOLO: z.string().optional(),
+  STRIPE_PRICE_AGENCY: z.string().optional(),
+  STRIPE_PRICE_SCALE: z.string().optional(),
+  BILLING_SUCCESS_URL: z.string().default("http://localhost:5173/billing/success"),
+  BILLING_CANCEL_URL: z.string().default("http://localhost:5173/billing/cancel"),
+
   // Notifications & queues (Fase 3)
   ONESIGNAL_APP_ID: z.string().optional(),
   ONESIGNAL_API_KEY: z.string().optional(),

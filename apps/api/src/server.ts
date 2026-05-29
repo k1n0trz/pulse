@@ -17,6 +17,7 @@ import { auditRoutes } from "./routes/auditEvents.js";
 import { notificationRoutes } from "./routes/notifications.js";
 import { meRoutes } from "./routes/me.js";
 import { reportRoutes } from "./routes/reports.js";
+import { billingRoutes } from "./routes/billing.js";
 import { authPlugin } from "./auth/plugin.js";
 import { startScheduler, stopScheduler } from "./jobs/scheduler.js";
 import { shutdownQueue } from "./jobs/queue.js";
@@ -53,6 +54,7 @@ export async function buildServer() {
   await app.register(notificationRoutes, { prefix: "/v1" });
   await app.register(meRoutes, { prefix: "/v1" });
   await app.register(reportRoutes, { prefix: "/v1" });
+  await app.register(billingRoutes, { prefix: "/v1" });
 
   app.setErrorHandler((error: FastifyError, _req, reply) => {
     const status = error.statusCode ?? 500;

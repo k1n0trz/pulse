@@ -54,6 +54,12 @@ model Organization {
   name          String
   plan          PlanTier         @default(FREE)
   status        OrgStatus        @default(ACTIVE)
+  // Billing (Fase 5)
+  stripeCustomerId      String?   @unique
+  stripeSubscriptionId  String?   @unique
+  subscriptionStatus    String?   // trialing | active | past_due | canceled | incomplete
+  trialEndsAt           DateTime?
+  currentPeriodEnd      DateTime?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   memberships   Membership[]
