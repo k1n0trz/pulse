@@ -32,14 +32,14 @@ export function CampaignWizard() {
           <div>
             <span>Paso {step + 1} de 6</span>
             <h2>{steps[step].label}</h2>
-            <p>Pulse audita objetivo, presupuesto, audiencia, creatividad, tracking y riesgo antes de permitir publicacion.</p>
+            <p>Pulse audita objetivo, presupuesto, audiencia, creatividad, tracking y riesgo antes de permitir publicación.</p>
           </div>
 
           <div className="review-list">
-            <p><CheckCircle2 size={16} /> Presupuesto dentro del limite diario.</p>
-            <p><CheckCircle2 size={16} /> No modifica campanas criticas.</p>
+            <p><CheckCircle2 size={16} /> Presupuesto dentro del límite diario.</p>
+            <p><CheckCircle2 size={16} /> No modifica campañas críticas.</p>
             <p><CheckCircle2 size={16} /> Tracking validado para eventos principales.</p>
-            <p><CheckCircle2 size={16} /> Publicacion requiere aprobacion humana.</p>
+            <p><CheckCircle2 size={16} /> Publicación requiere aprobación humana.</p>
           </div>
 
           <div className="wizard-actions">

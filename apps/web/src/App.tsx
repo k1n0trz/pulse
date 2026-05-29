@@ -133,12 +133,12 @@ export function App() {
         </header>
 
         <section className="metric-grid">
-          <Metric icon={BarChart3} label="Inversion total" value={money(spend)} change="+18.7%" tone="good" />
+          <Metric icon={BarChart3} label="Inversión total" value={money(spend)} change="+18.7%" tone="good" />
           <Metric icon={Target} label="Resultados" value={results.toLocaleString("en-US")} change="+23.5%" tone="good" />
           <Metric icon={AlertTriangle} label="CPA promedio" value={money(avgCpa)} change="+12.3%" tone="bad" />
           <Metric icon={Sparkles} label="ROAS" value={`${avgRoas}x`} change="+33.3%" tone="good" />
           <Metric icon={Layers3} label="CTR / CPM" value={`${avgCtr}% / $${avgCpm}`} change="+8.4%" tone="good" />
-          <Metric icon={Megaphone} label="Campanas activas" value={String(campaigns.filter((c) => c.status === "active").length)} change={`${plan.alerts.length} alertas`} tone="warn" />
+          <Metric icon={Megaphone} label="Campañas activas" value={String(campaigns.filter((c) => c.status === "active").length)} change={`${plan.alerts.length} alertas`} tone="warn" />
         </section>
 
         {section === "inicio" && (
@@ -194,7 +194,7 @@ function AlertsPanel({ plan }: { plan: ReturnType<typeof createOptimizationPlan>
   return (
     <section className="panel alerts-panel">
       <div className="panel-head">
-        <h2>Alertas criticas</h2>
+        <h2>Alertas críticas</h2>
         <span>{plan.alerts.length}</span>
       </div>
       <div className="stack">
@@ -241,7 +241,7 @@ function AuditView({ audit }: { audit: ReturnType<typeof auditAccount> }) {
     ["Tracking", audit.tracking],
     ["Creatividad", audit.creative],
     ["Presupuesto", audit.budget],
-    ["Segmentacion", audit.audience]
+    ["Segmentación", audit.audience]
   ];
 
   return (
@@ -295,7 +295,7 @@ function ReportsView({ report, connectorPrinciples }: { report: ReturnType<typeo
         <article className="panel report-card">
           <FileText size={34} />
           <h2>Reporte ejecutivo</h2>
-          <p>Inversion {money(report.spend)} · ROAS {report.roas}x · Score {report.accountScore}/100</p>
+          <p>Inversión {money(report.spend)} · ROAS {report.roas}x · Score {report.accountScore}/100</p>
           <div className="report-actions">
             <button disabled={busy !== null} onClick={() => void run("pdf", reports.executivePdf)}>
               {busy === "pdf" ? "Generando…" : "Exportar PDF"}

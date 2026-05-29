@@ -10,7 +10,7 @@ export function ModeControl({ mode, onModeChange, policy, onPolicyChange }: { mo
         <button className={mode === "assisted" ? "selected" : ""} onClick={() => onModeChange("assisted")}>Asistido</button>
         <button className={mode === "autopilot" ? "selected" : ""} onClick={() => onModeChange("autopilot")}>Auto</button>
       </div>
-      <p>{mode === "read" ? "Solo analiza." : mode === "assisted" ? "Requiere aprobacion para ejecutar." : "Ejecuta dentro de limites."}</p>
+      <p>{mode === "read" ? "Solo analiza." : mode === "assisted" ? "Requiere aprobación para ejecutar." : "Ejecuta dentro de límites."}</p>
       <label className="switch-line">
         <ShieldAlert size={16} />
         Kill Switch
@@ -18,7 +18,7 @@ export function ModeControl({ mode, onModeChange, policy, onPolicyChange }: { mo
       </label>
       <label className="switch-line">
         <Power size={16} />
-        Bloquear criticas
+        Bloquear críticas
         <input type="checkbox" checked={policy.blockedCriticalCampaigns} onChange={(event) => onPolicyChange({ ...policy, blockedCriticalCampaigns: event.target.checked })} />
       </label>
     </section>

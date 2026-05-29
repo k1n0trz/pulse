@@ -110,6 +110,7 @@ h1, h2, h3, h4, p, strong, span, td, th, summary, li { overflow-wrap: anywhere; 
 table { width: 100%; border-collapse: collapse; min-width: 980px; }
 tbody tr { transition: background-color .12s ease; }
 tbody tr:hover { background: #ffffff06; }
+.table-empty { text-align: center; color: var(--muted); padding: 28px 10px; white-space: normal; }
 th, td { text-align: left; padding: 13px 10px; border-bottom: 1px solid #29243a; font-size: 13px; white-space: nowrap; }
 th { color: var(--muted); font-weight: 600; }
 td strong, td span { display: block; }

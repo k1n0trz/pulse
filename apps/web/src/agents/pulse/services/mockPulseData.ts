@@ -119,7 +119,7 @@ export const mockCampaigns: Campaign[] = [
   },
   {
     id: "cmp_traffic_site",
-    name: "Trafico | Sitio Web",
+    name: "Tráfico | Sitio Web",
     objective: "Trafico",
     status: "active",
     budget: 30000,

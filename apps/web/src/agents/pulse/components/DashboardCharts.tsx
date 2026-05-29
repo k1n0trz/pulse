@@ -12,8 +12,8 @@ export function DashboardCharts({ trend, leads, sales }: { trend: TrendPoint[]; 
   const objectiveData = [
     { name: "Ventas", value: sales, color: "#8B5CF6" },
     { name: "Leads", value: leads, color: "#EC4899" },
-    { name: "Trafico", value: 1250, color: "#3B82F6" },
-    { name: "Interaccion", value: 325, color: "#FB923C" },
+    { name: "Tráfico", value: 1250, color: "#3B82F6" },
+    { name: "Interacción", value: 325, color: "#FB923C" },
     { name: "Mensajes", value: 230, color: "#22C55E" }
   ];
 
@@ -21,7 +21,7 @@ export function DashboardCharts({ trend, leads, sales }: { trend: TrendPoint[]; 
     <>
       <section className="panel chart-panel wide">
         <div className="panel-head">
-          <h2>Inversion vs resultados</h2>
+          <h2>Inversión vs resultados</h2>
           <span>ROAS</span>
         </div>
         <ResponsiveContainer width="100%" height={245}>

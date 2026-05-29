@@ -13,7 +13,7 @@ export function AutopilotPanel({ mode, policy, result, onPolicyChange, expanded 
         <Zap size={32} />
         <div>
           <strong>{result.executedActions.length} ejecutadas · {result.pendingApprovals.length} pendientes</strong>
-          <p>{result.blockedReasons[0] ?? "Politicas activas y registro completo de acciones."}</p>
+          <p>{result.blockedReasons[0] ?? "Políticas activas y registro completo de acciones."}</p>
         </div>
       </div>
 
@@ -37,9 +37,9 @@ export function AutopilotPanel({ mode, policy, result, onPolicyChange, expanded 
       </div>
 
       <div className="guardrails">
-        <p><ShieldCheck size={16} /> No crea campanas nuevas sin aprobacion.</p>
-        <p><ShieldCheck size={16} /> No publica anuncios nuevos sin aprobacion.</p>
-        <p><ShieldCheck size={16} /> No elimina campanas.</p>
+        <p><ShieldCheck size={16} /> No crea campañas nuevas sin aprobación.</p>
+        <p><ShieldCheck size={16} /> No publica anuncios nuevos sin aprobación.</p>
+        <p><ShieldCheck size={16} /> No elimina campañas.</p>
         <p><SlidersHorizontal size={16} /> Limite de gasto diario: ${policy.maxDailySpend.toLocaleString("en-US")}.</p>
       </div>
 

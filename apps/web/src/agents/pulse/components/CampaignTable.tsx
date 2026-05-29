@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { BarChart3, Copy, Edit3, MoreHorizontal, Pause, Play, TrendingUp } from "lucide-react";
 import type { Campaign } from "@pulse/shared";
 
@@ -12,15 +13,28 @@ function num(value: number, decimals = 1): string {
 }
 
 export function CampaignTable({ campaigns, compact = false }: { campaigns: Campaign[]; compact?: boolean }) {
-  const visibleCampaigns = compact ? campaigns.slice(0, 5) : campaigns;
+  const [query, setQuery] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const base = q
+      ? campaigns.filter((c) => c.name.toLowerCase().includes(q) || c.objective.toLowerCase().includes(q) || c.status.toLowerCase().includes(q))
+      : campaigns;
+    return compact ? base.slice(0, 5) : base;
+  }, [campaigns, query, compact]);
 
   return (
     <section className={`panel campaign-panel ${compact ? "wide" : "full-view"}`}>
       <div className="panel-head">
         <h2>Rendimiento de campañas</h2>
         <div className="table-tools">
-          <input aria-label="Buscar campaña" placeholder="Buscar campaña..." />
-          <button>Filtros</button>
+          <input
+            aria-label="Buscar campaña"
+            placeholder="Buscar campaña..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {query && <button onClick={() => setQuery("")}>Limpiar</button>}
         </div>
       </div>
       <div className="table-scroll">
@@ -42,7 +56,10 @@ export function CampaignTable({ campaigns, compact = false }: { campaigns: Campa
             </tr>
           </thead>
           <tbody>
-            {visibleCampaigns.map((campaign) => (
+            {filtered.length === 0 && (
+              <tr><td colSpan={12} className="table-empty">Sin campañas que coincidan con "{query}".</td></tr>
+            )}
+            {filtered.map((campaign) => (
               <tr key={campaign.id}>
                 <td>
                   <strong>{campaign.name}</strong>
