@@ -1,7 +1,7 @@
-export * from "./types";
-export * from "./meta";
-export { createOptimizationPlan } from "./optimizer";
-export { auditAccount, type PulseAuditResult } from "./audit";
-export { evaluateDecisionImpact, updateRuleWeights, seedRuleWeights } from "./learning";
-export { runPulseAutopilot, type AutopilotRunResult, type RunPulseAutopilotInput } from "./autopilot";
-export { buildExecutiveReport, campaignsToCsv } from "./reports";
+export * from "./types.js";
+export * from "./meta.js";
+export { createOptimizationPlan } from "./optimizer.js";
+export { auditAccount, type PulseAuditResult } from "./audit.js";
+export { evaluateDecisionImpact, updateRuleWeights, seedRuleWeights } from "./learning.js";
+export { runPulseAutopilot, type AutopilotRunResult, type RunPulseAutopilotInput } from "./autopilot.js";
+export { buildExecutiveReport, campaignsToCsv } from "./reports.js";
