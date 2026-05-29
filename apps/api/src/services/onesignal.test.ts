@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { isOneSignalConfigured, sendOneSignalNotification } from "./onesignal.js";
 
 // Clean up between tests
