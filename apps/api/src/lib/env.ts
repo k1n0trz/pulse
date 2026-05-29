@@ -25,6 +25,11 @@ const EnvSchema = z.object({
   // Clerk (Fase 3c). When unset, the API runs in single-tenant demo mode.
   CLERK_SECRET_KEY: z.string().optional(),
   CLERK_PUBLISHABLE_KEY: z.string().optional(),
+  // Optional comma-separated allowlist. Empty means any authenticated Clerk user can access their tenant.
+  AUTH_ALLOWED_EMAILS: z
+    .string()
+    .default("")
+    .transform((v) => v.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean)),
 
   // Meta integration (Fase 1)
   META_APP_ID: z.string().optional(),

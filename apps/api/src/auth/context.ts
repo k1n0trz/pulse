@@ -160,7 +160,7 @@ async function resolveClerkContext(request: FastifyRequest): Promise<AuthContext
 
   await adoptLegacyDemoMetaData({ organizationId: org.id, email: normalizedEmail });
 
-  const role = mapClerkRole(claims.org_role);
+  const role = claims.org_id ? mapClerkRole(claims.org_role) : "OWNER";
   await prisma.membership.upsert({
     where: { userId_organizationId: { userId: user.id, organizationId: org.id } },
     create: { userId: user.id, organizationId: org.id, role, acceptedAt: new Date() },
