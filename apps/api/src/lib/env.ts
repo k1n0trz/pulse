@@ -22,6 +22,9 @@ const EnvSchema = z.object({
 
   // Auth (Fase 3)
   JWT_SECRET: z.string().min(32).default("dev-secret-change-me-dev-secret-change-me"),
+  // Clerk (Fase 3c). When unset, the API runs in single-tenant demo mode.
+  CLERK_SECRET_KEY: z.string().optional(),
+  CLERK_PUBLISHABLE_KEY: z.string().optional(),
 
   // Meta integration (Fase 1)
   META_APP_ID: z.string().optional(),

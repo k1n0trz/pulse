@@ -3,13 +3,11 @@ import { z } from "zod";
 import { prisma } from "../db/prisma.js";
 
 const ListQuery = z.object({
-  organizationId: z.string().optional(),
   accountId: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(500).default(100)
 });
 
 const InsightsQuery = z.object({
-  organizationId: z.string().optional(),
   campaignId: z.string().optional(),
   accountId: z.string().optional(),
   days: z.coerce.number().int().min(1).max(180).default(30)
@@ -19,7 +17,7 @@ export const campaignRoutes: FastifyPluginAsync = async (app) => {
   app.get("/campaigns", async (req, reply) => {
     const parsed = ListQuery.safeParse(req.query);
     if (!parsed.success) return reply.code(400).send({ ok: false, error: "invalid_query" });
-    const organizationId = parsed.data.organizationId ?? (await defaultOrgId());
+    const { organizationId } = await req.getAuth();
 
     const campaigns = await prisma.campaignSnapshot.findMany({
       where: {
@@ -45,6 +43,7 @@ export const campaignRoutes: FastifyPluginAsync = async (app) => {
   app.get("/insights", async (req, reply) => {
     const parsed = InsightsQuery.safeParse(req.query);
     if (!parsed.success) return reply.code(400).send({ ok: false, error: "invalid_query" });
+    const { organizationId } = await req.getAuth();
 
     const since = new Date();
     since.setUTCDate(since.getUTCDate() - parsed.data.days);
@@ -53,6 +52,7 @@ export const campaignRoutes: FastifyPluginAsync = async (app) => {
       where: {
         date: { gte: since },
         campaign: {
+          organizationId,
           ...(parsed.data.campaignId ? { id: parsed.data.campaignId } : {}),
           ...(parsed.data.accountId ? { accountId: parsed.data.accountId } : {})
         }
@@ -103,10 +103,4 @@ function toCampaignDTO(c: Awaited<ReturnType<typeof prisma.campaignSnapshot.find
     windowEnd: c.windowEnd,
     capturedAt: c.capturedAt
   };
-}
-
-async function defaultOrgId(): Promise<string> {
-  const org = await prisma.organization.findUnique({ where: { slug: "demo" } });
-  if (!org) throw new Error("Demo organization not found. Run `pnpm db:seed`.");
-  return org.id;
 }

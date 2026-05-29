@@ -6,7 +6,6 @@ import { runAgent, type AgentEvent, type ChatMessageInput } from "../ai/agent.js
 import { prisma } from "../db/prisma.js";
 
 const ChatBody = z.object({
-  organizationId: z.string().optional(),
   mode: z.enum(["read", "assisted", "autopilot"]).default("read"),
   policy: z
     .object({
@@ -30,13 +29,6 @@ const ChatBody = z.object({
     .max(40),
   stream: z.boolean().default(true)
 });
-
-async function resolveOrganizationId(provided?: string): Promise<string> {
-  if (provided) return provided;
-  const org = await prisma.organization.findUnique({ where: { slug: "demo" } });
-  if (!org) throw new Error("Demo organization not found. Run `pnpm db:seed`.");
-  return org.id;
-}
 
 async function resolvePolicy(organizationId: string, provided?: AutopilotPolicy): Promise<AutopilotPolicy> {
   if (provided) return provided;
@@ -79,7 +71,7 @@ export const chatRoutes: FastifyPluginAsync = async (app) => {
         .send({ ok: false, error: "anthropic_not_configured", message: "Set ANTHROPIC_API_KEY in .env to enable the AI brain (Fase 2)." });
     }
 
-    const organizationId = await resolveOrganizationId(parsed.data.organizationId);
+    const { organizationId } = await req.getAuth();
     const policy = await resolvePolicy(organizationId, parsed.data.policy);
     const mode = parsed.data.mode as OperationMode;
     const conversation: ChatMessageInput[] = parsed.data.messages;

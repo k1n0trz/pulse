@@ -16,6 +16,7 @@ import { recommendationRoutes } from "./routes/recommendations.js";
 import { auditRoutes } from "./routes/auditEvents.js";
 import { notificationRoutes } from "./routes/notifications.js";
 import { meRoutes } from "./routes/me.js";
+import { authPlugin } from "./auth/plugin.js";
 import { startScheduler, stopScheduler } from "./jobs/scheduler.js";
 import { shutdownQueue } from "./jobs/queue.js";
 
@@ -38,6 +39,7 @@ export async function buildServer() {
     max: 200,
     timeWindow: "1 minute"
   });
+  await app.register(authPlugin);
 
   await app.register(healthRoutes, { prefix: "/" });
   await app.register(metaRoutes, { prefix: "/v1" });
@@ -51,8 +53,12 @@ export async function buildServer() {
   await app.register(meRoutes, { prefix: "/v1" });
 
   app.setErrorHandler((error: FastifyError, _req, reply) => {
-    app.log.error({ err: error }, "Unhandled error");
     const status = error.statusCode ?? 500;
+    if (status >= 500) {
+      app.log.error({ err: error }, "Unhandled error");
+    } else {
+      app.log.warn({ err: error.message, status }, "Request error");
+    }
     return reply.code(status).send({
       ok: false,
       error: status >= 500 ? "internal_error" : error.code ?? "request_failed",

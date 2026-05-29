@@ -7,11 +7,11 @@ import { MarketingApiConnector } from "../meta/connectors/marketingApi.js";
 import { decryptString } from "../lib/crypto.js";
 import { loadEnv } from "../lib/env.js";
 import { notifyRecommendationDecision } from "../services/notifications.js";
+import { requireRole } from "../auth/context.js";
 
 const env = loadEnv();
 
 const ListQuery = z.object({
-  organizationId: z.string().optional(),
   status: z.enum(["OPEN", "APPROVED", "REJECTED", "EXECUTED", "EXPIRED"]).optional(),
   severity: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50)
@@ -19,27 +19,19 @@ const ListQuery = z.object({
 
 const ApproveBody = z.object({
   execute: z.boolean().default(false),
-  notes: z.string().max(1000).optional(),
-  userId: z.string().optional()
+  notes: z.string().max(1000).optional()
 });
 
 const RejectBody = z.object({
-  notes: z.string().max(1000).optional(),
-  userId: z.string().optional()
+  notes: z.string().max(1000).optional()
 });
-
-async function defaultOrgId(): Promise<string> {
-  const org = await prisma.organization.findUnique({ where: { slug: "demo" } });
-  if (!org) throw new Error("Demo organization not found. Run `pnpm db:seed`.");
-  return org.id;
-}
 
 export const recommendationRoutes: FastifyPluginAsync = async (app) => {
   app.get("/recommendations", async (req, reply) => {
     const parsed = ListQuery.safeParse(req.query);
     if (!parsed.success) return reply.code(400).send({ ok: false, error: "invalid_query" });
 
-    const organizationId = parsed.data.organizationId ?? (await defaultOrgId());
+    const { organizationId } = await req.getAuth();
 
     const recommendations = await prisma.recommendation.findMany({
       where: {
@@ -63,12 +55,14 @@ export const recommendationRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.post("/recommendations/:id/approve", async (req, reply) => {
+    const auth = await req.getAuth();
+    requireRole(auth, "ANALYST");
     const { id } = req.params as { id: string };
     const parsed = ApproveBody.safeParse(req.body ?? {});
     if (!parsed.success) return reply.code(400).send({ ok: false, error: "invalid_body" });
 
-    const recommendation = await prisma.recommendation.findUnique({
-      where: { id },
+    const recommendation = await prisma.recommendation.findFirst({
+      where: { id, organizationId: auth.organizationId },
       include: { decision: true }
     });
     if (!recommendation) return reply.code(404).send({ ok: false, error: "not_found" });
@@ -76,10 +70,10 @@ export const recommendationRoutes: FastifyPluginAsync = async (app) => {
     if (recommendation.status !== "OPEN") return reply.code(409).send({ ok: false, error: `status_${recommendation.status.toLowerCase()}` });
 
     try {
-      const result = await approveAndOptionallyExecute(recommendation.id, parsed.data);
+      const result = await approveAndOptionallyExecute(recommendation.id, { ...parsed.data, userId: auth.userId });
       await notifyRecommendationDecision({
         organizationId: recommendation.organizationId,
-        userId: parsed.data.userId,
+        userId: auth.userId,
         recommendationId: recommendation.id,
         outcome: parsed.data.execute ? "AUTO_EXECUTED" : "APPROVED",
         title: recommendation.title
@@ -92,12 +86,14 @@ export const recommendationRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.post("/recommendations/:id/reject", async (req, reply) => {
+    const auth = await req.getAuth();
+    requireRole(auth, "ANALYST");
     const { id } = req.params as { id: string };
     const parsed = RejectBody.safeParse(req.body ?? {});
     if (!parsed.success) return reply.code(400).send({ ok: false, error: "invalid_body" });
 
-    const recommendation = await prisma.recommendation.findUnique({
-      where: { id },
+    const recommendation = await prisma.recommendation.findFirst({
+      where: { id, organizationId: auth.organizationId },
       include: { decision: true }
     });
     if (!recommendation) return reply.code(404).send({ ok: false, error: "not_found" });
@@ -108,7 +104,7 @@ export const recommendationRoutes: FastifyPluginAsync = async (app) => {
         organizationId: recommendation.organizationId,
         recommendationId: recommendation.id,
         decidedBy: "USER",
-        decidedByUserId: parsed.data.userId,
+        decidedByUserId: auth.userId,
         outcome: "REJECTED",
         notes: parsed.data.notes
       }
@@ -120,7 +116,7 @@ export const recommendationRoutes: FastifyPluginAsync = async (app) => {
     await prisma.auditEvent.create({
       data: {
         organizationId: recommendation.organizationId,
-        userId: parsed.data.userId,
+        userId: auth.userId,
         type: "recommendation.rejected",
         severity: "INFO",
         message: `Recommendation ${recommendation.id} rejected`,
@@ -129,7 +125,7 @@ export const recommendationRoutes: FastifyPluginAsync = async (app) => {
     });
     await notifyRecommendationDecision({
       organizationId: recommendation.organizationId,
-      userId: parsed.data.userId,
+      userId: auth.userId,
       recommendationId: recommendation.id,
       outcome: "REJECTED",
       title: recommendation.title

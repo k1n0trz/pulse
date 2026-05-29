@@ -2,17 +2,11 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { prisma } from "../db/prisma.js";
 import { importExistingToken, revokeConnection } from "../meta/oauth.js";
-
-const ListQuery = z.object({
-  organizationId: z.string().optional()
-});
+import { requireRole } from "../auth/context.js";
 
 export const connectionRoutes: FastifyPluginAsync = async (app) => {
-  app.get("/connections", async (req, reply) => {
-    const parsed = ListQuery.safeParse(req.query);
-    if (!parsed.success) return reply.code(400).send({ ok: false, error: "invalid_query" });
-
-    const organizationId = parsed.data.organizationId ?? (await defaultOrgId());
+  app.get("/connections", async (req) => {
+    const { organizationId } = await req.getAuth();
 
     const connections = await prisma.metaConnection.findMany({
       where: { organizationId },
@@ -45,9 +39,10 @@ export const connectionRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.get("/connections/:id", async (req, reply) => {
+    const { organizationId } = await req.getAuth();
     const { id } = req.params as { id: string };
-    const connection = await prisma.metaConnection.findUnique({
-      where: { id },
+    const connection = await prisma.metaConnection.findFirst({
+      where: { id, organizationId },
       include: { accounts: true }
     });
     if (!connection) return reply.code(404).send({ ok: false, error: "not_found" });
@@ -57,15 +52,16 @@ export const connectionRoutes: FastifyPluginAsync = async (app) => {
   });
 
   const ImportBody = z.object({
-    accessToken: z.string().min(20),
-    organizationId: z.string().optional()
+    accessToken: z.string().min(20)
   });
 
   app.post("/connections/import", async (req, reply) => {
+    const auth = await req.getAuth();
+    requireRole(auth, "ADMIN");
     const parsed = ImportBody.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ ok: false, error: "invalid_body", issues: parsed.error.issues });
     try {
-      const result = await importExistingToken(parsed.data);
+      const result = await importExistingToken({ accessToken: parsed.data.accessToken, organizationId: auth.organizationId });
       return { ok: true, ...result };
     } catch (error) {
       app.log.error({ err: error }, "Token import failed");
@@ -74,7 +70,11 @@ export const connectionRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.delete("/connections/:id", async (req, reply) => {
+    const auth = await req.getAuth();
+    requireRole(auth, "ADMIN");
     const { id } = req.params as { id: string };
+    const owned = await prisma.metaConnection.findFirst({ where: { id, organizationId: auth.organizationId }, select: { id: true } });
+    if (!owned) return reply.code(404).send({ ok: false, error: "not_found" });
     try {
       await revokeConnection(id);
       return { ok: true };
@@ -84,9 +84,3 @@ export const connectionRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 };
-
-async function defaultOrgId(): Promise<string> {
-  const org = await prisma.organization.findUnique({ where: { slug: "demo" } });
-  if (!org) throw new Error("Demo organization not found. Run `pnpm db:seed`.");
-  return org.id;
-}

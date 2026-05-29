@@ -10,12 +10,30 @@ export class ApiError extends Error {
   }
 }
 
+// Auth token getter — set by the Clerk gate when configured. In demo mode it
+// stays null and the backend resolves the demo org.
+let authTokenGetter: (() => Promise<string | null>) | null = null;
+export function setAuthTokenGetter(getter: (() => Promise<string | null>) | null) {
+  authTokenGetter = getter;
+}
+
+async function authHeaders(): Promise<Record<string, string>> {
+  if (!authTokenGetter) return {};
+  try {
+    const token = await authTokenGetter();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${BASE_URL}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
+      ...(await authHeaders()),
       ...(init?.headers ?? {})
     }
   });
@@ -260,7 +278,7 @@ export interface ChatStreamInput {
 export async function streamChat(input: ChatStreamInput, onEvent: (event: AgentStreamEvent) => void, signal?: AbortSignal): Promise<void> {
   const response = await fetch(`${BASE_URL}/v1/chat`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+    headers: { "Content-Type": "application/json", Accept: "text/event-stream", ...(await authHeaders()) },
     body: JSON.stringify({ ...input, stream: true }),
     signal
   });

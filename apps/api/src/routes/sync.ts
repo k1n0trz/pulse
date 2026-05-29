@@ -1,6 +1,8 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { syncAdAccounts, syncAllForConnection, syncCampaigns } from "../meta/sync.js";
+import { prisma } from "../db/prisma.js";
+import { requireRole } from "../auth/context.js";
 
 const SyncConnectionBody = z.object({
   datePreset: z.enum(["today", "yesterday", "last_7d", "last_14d", "last_30d", "last_90d"]).optional()
@@ -12,7 +14,11 @@ const SyncAccountBody = z.object({
 
 export const syncRoutes: FastifyPluginAsync = async (app) => {
   app.post("/connections/:id/sync", async (req, reply) => {
+    const auth = await req.getAuth();
+    requireRole(auth, "ANALYST");
     const { id } = req.params as { id: string };
+    const owned = await prisma.metaConnection.findFirst({ where: { id, organizationId: auth.organizationId }, select: { id: true } });
+    if (!owned) return reply.code(404).send({ ok: false, error: "not_found" });
     const parsed = SyncConnectionBody.safeParse(req.body ?? {});
     if (!parsed.success) return reply.code(400).send({ ok: false, error: "invalid_body" });
     try {
@@ -25,7 +31,11 @@ export const syncRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.post("/connections/:id/sync/accounts", async (req, reply) => {
+    const auth = await req.getAuth();
+    requireRole(auth, "ANALYST");
     const { id } = req.params as { id: string };
+    const owned = await prisma.metaConnection.findFirst({ where: { id, organizationId: auth.organizationId }, select: { id: true } });
+    if (!owned) return reply.code(404).send({ ok: false, error: "not_found" });
     try {
       const result = await syncAdAccounts(id);
       return { ok: true, result };
@@ -36,7 +46,11 @@ export const syncRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.post("/accounts/:id/sync", async (req, reply) => {
+    const auth = await req.getAuth();
+    requireRole(auth, "ANALYST");
     const { id } = req.params as { id: string };
+    const owned = await prisma.metaAdAccount.findFirst({ where: { id, organizationId: auth.organizationId }, select: { id: true } });
+    if (!owned) return reply.code(404).send({ ok: false, error: "not_found" });
     const parsed = SyncAccountBody.safeParse(req.body ?? {});
     if (!parsed.success) return reply.code(400).send({ ok: false, error: "invalid_body" });
     try {
