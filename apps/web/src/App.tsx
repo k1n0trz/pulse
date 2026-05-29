@@ -24,15 +24,18 @@ type Section = "inicio" | "campanas" | "autopilot" | "chat" | "auditoria" | "rep
 
 const nav = [
   { id: "inicio", label: "Inicio", icon: Gauge },
-  { id: "campanas", label: "Campanas", icon: Megaphone },
+  { id: "campanas", label: "Campañas", icon: Megaphone },
   { id: "autopilot", label: "Autopilot", icon: Zap },
   { id: "chat", label: "Chat Pulse", icon: Bot },
-  { id: "auditoria", label: "Auditoria", icon: ShieldCheck },
+  { id: "auditoria", label: "Auditoría", icon: ShieldCheck },
   { id: "reportes", label: "Reportes", icon: FileText }
 ] satisfies Array<{ id: Section; label: string; icon: typeof Gauge }>;
 
 function money(value: number) {
-  return `$${value.toLocaleString("en-US")}`;
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+  if (abs >= 10_000) return `$${(value / 1_000).toFixed(1)}K`;
+  return `$${Math.round(value).toLocaleString("en-US")}`;
 }
 
 export function App() {
@@ -110,7 +113,7 @@ export function App() {
         <header className="topbar">
           <div>
             <h1>Hola, Edi</h1>
-            <p>Rendimiento y ejecucion activa de campanas Meta Ads.</p>
+            <p>Rendimiento y ejecución activa de campañas Meta Ads.</p>
           </div>
           <div className="topbar-actions">
             <NotificationsButton />
@@ -124,7 +127,7 @@ export function App() {
             </button>
             <button className="primary-button" onClick={() => setSection("wizard")}>
               <Plus size={17} />
-              Nueva campana
+              Nueva campaña
             </button>
           </div>
         </header>
