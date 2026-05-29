@@ -285,3 +285,16 @@ td span { color: var(--muted); font-size: 12px; margin-top: 3px; }
 .report-actions button { background: var(--purple); border: 1px solid var(--purple-strong); color: white; padding: 8px 14px; border-radius: 8px; font-size: 13px; }
 .report-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
 .report-actions button:nth-child(2) { background: transparent; color: var(--lilac); }
+
+/* ----- Onboarding checklist (Fase 4b) ----- */
+.onboarding-panel { grid-column: 1 / -1; }
+.onboarding-steps { display: grid; gap: 8px; }
+.onboarding-step { display: grid; grid-template-columns: 20px 1fr auto; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: #0d0b1a; }
+.onboarding-step.done { opacity: 0.6; }
+.onboarding-step .step-icon { color: var(--muted); }
+.onboarding-step .step-icon.ok { color: #6ee7b7; }
+.onboarding-step .step-text { display: grid; gap: 2px; }
+.onboarding-step .step-text strong { font-size: 14px; }
+.onboarding-step .step-text small { color: var(--muted); font-size: 12px; }
+.onboarding-step .step-action { background: var(--purple); border: 1px solid var(--purple-strong); color: #fff; padding: 6px 14px; border-radius: 8px; font-size: 13px; }
+.onboarding-step .step-action:disabled { opacity: 0.5; }

@@ -14,6 +14,8 @@ import { ActivityTimeline } from "./agents/pulse/components/ActivityTimeline";
 import { useMetaConnection } from "./agents/pulse/hooks/useMetaConnection";
 import { useCampaigns } from "./agents/pulse/hooks/useCampaigns";
 import { NotificationsButton } from "./agents/pulse/components/NotificationsButton";
+import { OnboardingChecklist } from "./agents/pulse/components/OnboardingChecklist";
+import { useAccountTrend } from "./agents/pulse/hooks/useAccountTrend";
 import { reports } from "./lib/api";
 import type { OperationMode } from "@pulse/shared";
 import { metaConnectorPrinciples } from "@pulse/shared";
@@ -42,6 +44,8 @@ export function App() {
   const liveCampaigns = useCampaigns({ enabled: Boolean(metaState.activeConnection) });
   const campaigns = liveCampaigns.campaigns.length > 0 ? liveCampaigns.campaigns : mockCampaigns;
   const usingLiveData = liveCampaigns.campaigns.length > 0;
+  const trendFallback = useMemo(() => accountTrend.map((t) => ({ ...t, results: t.conversions })), []);
+  const { trend } = useAccountTrend({ enabled: Boolean(metaState.activeConnection), fallback: trendFallback });
 
   const plan = useMemo(() => createOptimizationPlan(campaigns, policy), [campaigns, policy]);
   const autopilot = useMemo(() => runPulseAutopilot({ campaigns, mode, policy }), [campaigns, mode, policy]);
@@ -137,12 +141,19 @@ export function App() {
         {section === "inicio" && (
           <div className="dashboard-grid">
             <MetaConnectionPanel state={metaState} />
+            <OnboardingChecklist
+              metaState={metaState}
+              hasCampaigns={usingLiveData}
+              onConnect={() => void metaState.startConnect()}
+              onSync={() => void metaState.syncNow("last_30d")}
+              onGoToChat={() => setSection("chat")}
+            />
             {!usingLiveData && (
               <p className="muted-banner">
                 Mostrando datos demo. Conecta una cuenta de Meta para ver campañas reales.
               </p>
             )}
-            <DashboardCharts trend={accountTrend} leads={leads} sales={sales} />
+            <DashboardCharts trend={trend} leads={leads} sales={sales} />
             <AlertsPanel plan={plan} />
             <CampaignTable campaigns={campaigns} compact />
             <AutopilotPanel mode={mode} policy={policy} result={autopilot} onPolicyChange={setPolicy} />

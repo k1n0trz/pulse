@@ -140,6 +140,21 @@ export const api = {
     config: () => request<{ configured: boolean; model: string }>("/v1/ai/config")
   },
 
+  insights: {
+    trend: (days = 30) => request<{ ok: boolean; trend: TrendPoint[] }>(`/v1/insights/trend?days=${days}`)
+  },
+
+  entitlements: {
+    get: () => request<EntitlementsDTO>("/v1/entitlements")
+  },
+
+  billing: {
+    config: () => request<{ configured: boolean; plans: Array<{ tier: string; name: string; monthlyUsd: number; purchasable: boolean }> }>("/v1/billing/config"),
+    status: () => request<{ ok: boolean; plan: string; subscriptionStatus: string | null; trialEndsAt: string | null; hasCustomer: boolean }>("/v1/billing/status"),
+    checkout: (tier: "SOLO" | "AGENCY" | "SCALE") => request<{ ok: boolean; url: string }>("/v1/billing/checkout", { method: "POST", body: JSON.stringify({ tier }) }),
+    portal: () => request<{ ok: boolean; url: string }>("/v1/billing/portal", { method: "POST", body: "{}" })
+  },
+
   recommendations: {
     list: (params?: { organizationId?: string; status?: "OPEN" | "APPROVED" | "REJECTED" | "EXECUTED" | "EXPIRED"; severity?: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"; limit?: number }) => {
       const q = new URLSearchParams();
@@ -211,6 +226,22 @@ export interface MeUserDTO {
   email: string;
   name: string | null;
   oneSignalExternalId: string | null;
+}
+
+export interface TrendPoint {
+  date: string;
+  spend: number;
+  results: number;
+  conversions: number;
+  roas: number;
+  cpa: number;
+}
+
+export interface EntitlementsDTO {
+  ok: boolean;
+  plan: { tier: string; name: string; monthlyUsd: number; limits: { maxAdAccounts: number; maxUsers: number; autopilot: boolean; whiteLabelReports: boolean; apiAccess: boolean } };
+  usage: { adAccounts: number; users: number };
+  can: { addAdAccount: boolean; addUser: boolean; useAutopilot: boolean; whiteLabelReports: boolean; apiAccess: boolean };
 }
 
 export interface RecommendationDTO {

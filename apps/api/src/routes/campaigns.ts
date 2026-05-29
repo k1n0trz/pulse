@@ -40,6 +40,49 @@ export const campaignRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
+  app.get("/insights/trend", async (req, reply) => {
+    const Query = z.object({ days: z.coerce.number().int().min(1).max(180).default(30) });
+    const parsed = Query.safeParse(req.query);
+    if (!parsed.success) return reply.code(400).send({ ok: false, error: "invalid_query" });
+    const { organizationId } = await req.getAuth();
+
+    const since = new Date();
+    since.setUTCDate(since.getUTCDate() - parsed.data.days);
+
+    const rows = await prisma.dailyMetricSnapshot.findMany({
+      where: { date: { gte: since }, campaign: { organizationId } },
+      orderBy: { date: "asc" },
+      select: { date: true, spend: true, results: true, conversions: true, roas: true, cpa: true }
+    });
+
+    // Aggregate by date.
+    const byDate = new Map<string, { spend: number; results: number; conversions: number; roasNum: number; roasDen: number }>();
+    for (const r of rows) {
+      const key = r.date.toISOString().slice(0, 10);
+      const acc = byDate.get(key) ?? { spend: 0, results: 0, conversions: 0, roasNum: 0, roasDen: 0 };
+      const spend = Number(r.spend);
+      acc.spend += spend;
+      acc.results += r.results;
+      acc.conversions += r.conversions;
+      if (r.roas !== null) {
+        acc.roasNum += Number(r.roas) * spend;
+        acc.roasDen += spend;
+      }
+      byDate.set(key, acc);
+    }
+
+    const trend = [...byDate.entries()].map(([date, a]) => ({
+      date,
+      spend: Number(a.spend.toFixed(2)),
+      results: a.results,
+      conversions: a.conversions,
+      roas: a.roasDen > 0 ? Number((a.roasNum / a.roasDen).toFixed(2)) : 0,
+      cpa: a.results > 0 ? Number((a.spend / a.results).toFixed(2)) : 0
+    }));
+
+    return { ok: true, days: parsed.data.days, points: trend.length, trend };
+  });
+
   app.get("/insights", async (req, reply) => {
     const parsed = InsightsQuery.safeParse(req.query);
     if (!parsed.success) return reply.code(400).send({ ok: false, error: "invalid_query" });

@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { OperationMode, AutopilotPolicy } from "@pulse/shared";
 import { isAnthropicConfigured } from "../ai/anthropicClient.js";
 import { runAgent, type AgentEvent, type ChatMessageInput } from "../ai/agent.js";
+import { assertAutopilotAllowed } from "../lib/entitlements.js";
 import { prisma } from "../db/prisma.js";
 
 const ChatBody = z.object({
@@ -72,8 +73,17 @@ export const chatRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const { organizationId } = await req.getAuth();
-    const policy = await resolvePolicy(organizationId, parsed.data.policy);
     const mode = parsed.data.mode as OperationMode;
+
+    if (mode === "autopilot") {
+      try {
+        await assertAutopilotAllowed(organizationId);
+      } catch (error) {
+        return reply.code(402).send({ ok: false, error: "plan_limit", message: (error as Error).message });
+      }
+    }
+
+    const policy = await resolvePolicy(organizationId, parsed.data.policy);
     const conversation: ChatMessageInput[] = parsed.data.messages;
 
     if (!parsed.data.stream) {

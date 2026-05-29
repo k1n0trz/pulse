@@ -39,10 +39,11 @@ let demoContextCache: AuthContext | null = null;
 
 async function resolveDemoContext(): Promise<AuthContext> {
   if (demoContextCache) return demoContextCache;
+  // Demo org runs on SCALE so single-tenant dev isn't plan-limited.
   const org = await prisma.organization.upsert({
     where: { slug: "demo" },
-    create: { slug: "demo", name: "Demo Organization", plan: "FREE" },
-    update: {}
+    create: { slug: "demo", name: "Demo Organization", plan: "SCALE" },
+    update: { plan: "SCALE" }
   });
   let user = await prisma.user.findUnique({ where: { email: "demo@pulse.local" } });
   if (!user) {
