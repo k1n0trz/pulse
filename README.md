@@ -28,7 +28,7 @@ pulse/
 | **3c** | Multi-tenant auth (Clerk) + role guards + Redis-backed jobs (BullMQ) | ✅ (works in demo mode; activate with Clerk/Upstash keys — see [docs/AUTH_AND_REDIS_SETUP.md](docs/AUTH_AND_REDIS_SETUP.md)) |
 | **4a** | Reports (PDF / CSV / XLSX) export with real data | ✅ |
 | **5** | Landing page + pricing + legal pack + Stripe billing | ✅ (activate Stripe with keys — see [docs/STRIPE_SETUP.md](docs/STRIPE_SETUP.md)) |
-| 6 | Closed beta → launch | ⏳ |
+| **6** | Deployment infra (Docker, Railway, Vercel, Prisma migrations) | ✅ (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)) |
 | 4 | Reports (PDF / CSV / XLSX), dashboards, polished UX | — |
 | 5 | Landing, Stripe billing, legal pack | — |
 | 6 | Closed beta → launch | — |
