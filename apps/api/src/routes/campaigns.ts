@@ -1,10 +1,22 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma.js";
+import { requireRole } from "../auth/context.js";
+import { assertActiveSubscription } from "../lib/entitlements.js";
+import { createAd, createAdSet, createCampaign, updateCampaign } from "../meta/adWrites.js";
 
 const ListQuery = z.object({
   accountId: z.string().optional(),
-  limit: z.coerce.number().int().min(1).max(500).default(100)
+  status: z.string().optional(), // ACTIVE | PAUSED | ARCHIVED | ...
+  objective: z.string().optional(),
+  q: z.string().optional(),
+  dateFrom: z.string().optional(), // ISO date — filters on capturedAt
+  dateTo: z.string().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(200).default(25),
+  // Back-compat: callers can still pass limit for an unpaginated cap.
+  limit: z.coerce.number().int().min(1).max(500).optional()
 });
 
 const InsightsQuery = z.object({
@@ -18,26 +30,144 @@ export const campaignRoutes: FastifyPluginAsync = async (app) => {
     const parsed = ListQuery.safeParse(req.query);
     if (!parsed.success) return reply.code(400).send({ ok: false, error: "invalid_query" });
     const { organizationId } = await req.getAuth();
+    const f = parsed.data;
 
-    const campaigns = await prisma.campaignSnapshot.findMany({
-      where: {
-        organizationId,
-        ...(parsed.data.accountId ? { accountId: parsed.data.accountId } : {})
-      },
-      orderBy: [{ capturedAt: "desc" }, { spend: "desc" }],
-      take: parsed.data.limit,
-      include: {
-        account: { select: { id: true, metaAccountId: true, name: true, currency: true } },
-        dailyMetrics: { orderBy: { date: "asc" } }
-      }
-    });
+    const capturedAt: Prisma.DateTimeFilter = {};
+    if (f.dateFrom) capturedAt.gte = new Date(f.dateFrom);
+    if (f.dateTo) {
+      const to = new Date(f.dateTo);
+      to.setUTCHours(23, 59, 59, 999);
+      capturedAt.lte = to;
+    }
+
+    const where: Prisma.CampaignSnapshotWhereInput = {
+      organizationId,
+      ...(f.accountId ? { accountId: f.accountId } : {}),
+      ...(f.status ? { status: f.status } : {}),
+      ...(f.objective ? { objective: f.objective } : {}),
+      ...(f.q ? { name: { contains: f.q, mode: "insensitive" } } : {}),
+      ...(Object.keys(capturedAt).length > 0 ? { capturedAt } : {})
+    };
+
+    // Back-compat: when `limit` is provided, behave like the old unpaginated call.
+    const usePaging = f.limit == null;
+    const take = usePaging ? f.pageSize : f.limit;
+    const skip = usePaging ? (f.page - 1) * f.pageSize : 0;
+
+    const [total, campaigns] = await Promise.all([
+      prisma.campaignSnapshot.count({ where }),
+      prisma.campaignSnapshot.findMany({
+        where,
+        orderBy: [{ capturedAt: "desc" }, { spend: "desc" }],
+        skip,
+        take,
+        include: {
+          account: { select: { id: true, metaAccountId: true, name: true, currency: true } },
+          dailyMetrics: { orderBy: { date: "asc" } }
+        }
+      })
+    ]);
 
     return {
       ok: true,
       organizationId,
       count: campaigns.length,
+      total,
+      page: usePaging ? f.page : 1,
+      pageSize: usePaging ? f.pageSize : campaigns.length,
+      totalPages: usePaging ? Math.max(1, Math.ceil(total / f.pageSize)) : 1,
       campaigns: campaigns.map(toCampaignDTO)
     };
+  });
+
+  // ---------- Writes (Fase 4) — Meta Ads-style management ----------
+
+  const CreateCampaignBody = z.object({
+    accountId: z.string().min(1),
+    name: z.string().min(1).max(200),
+    objective: z.string().min(1),
+    status: z.enum(["PAUSED", "ACTIVE"]).optional(),
+    dailyBudget: z.number().positive().optional(),
+    specialAdCategories: z.array(z.string()).optional()
+  });
+
+  app.post("/campaigns", async (req, reply) => {
+    const auth = await req.getAuth();
+    requireRole(auth, "ANALYST");
+    await assertActiveSubscription(auth.organizationId, auth.email);
+    const parsed = CreateCampaignBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ ok: false, error: "invalid_body", issues: parsed.error.issues });
+    const created = await createCampaign({ organizationId: auth.organizationId, userId: auth.userId, accountDbId: parsed.data.accountId, ...parsed.data });
+    return reply.code(201).send({ ok: true, id: created.id });
+  });
+
+  const UpdateCampaignBody = z.object({
+    name: z.string().min(1).max(200).optional(),
+    dailyBudget: z.number().positive().optional(),
+    status: z.enum(["PAUSED", "ACTIVE"]).optional()
+  });
+
+  app.patch("/campaigns/:id", async (req, reply) => {
+    const auth = await req.getAuth();
+    requireRole(auth, "ANALYST");
+    await assertActiveSubscription(auth.organizationId, auth.email);
+    const id = (req.params as { id: string }).id;
+    const parsed = UpdateCampaignBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ ok: false, error: "invalid_body" });
+    await updateCampaign({ organizationId: auth.organizationId, userId: auth.userId, campaignDbId: id, ...parsed.data });
+    return { ok: true };
+  });
+
+  const StatusBody = z.object({ status: z.enum(["PAUSED", "ACTIVE"]) });
+
+  app.post("/campaigns/:id/status", async (req, reply) => {
+    const auth = await req.getAuth();
+    requireRole(auth, "ANALYST");
+    await assertActiveSubscription(auth.organizationId, auth.email);
+    const id = (req.params as { id: string }).id;
+    const parsed = StatusBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ ok: false, error: "invalid_body" });
+    await updateCampaign({ organizationId: auth.organizationId, userId: auth.userId, campaignDbId: id, status: parsed.data.status });
+    return { ok: true };
+  });
+
+  const CreateAdSetBody = z.object({
+    accountId: z.string().min(1),
+    campaignId: z.string().min(1), // meta campaign id
+    name: z.string().min(1).max(200),
+    dailyBudget: z.number().positive().optional(),
+    billingEvent: z.string().optional(),
+    optimizationGoal: z.string().optional(),
+    targeting: z.record(z.unknown()).optional(),
+    status: z.enum(["PAUSED", "ACTIVE"]).optional()
+  });
+
+  app.post("/ad-sets", async (req, reply) => {
+    const auth = await req.getAuth();
+    requireRole(auth, "ANALYST");
+    await assertActiveSubscription(auth.organizationId, auth.email);
+    const parsed = CreateAdSetBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ ok: false, error: "invalid_body", issues: parsed.error.issues });
+    const created = await createAdSet({ organizationId: auth.organizationId, userId: auth.userId, accountDbId: parsed.data.accountId, ...parsed.data });
+    return reply.code(201).send({ ok: true, id: created.id });
+  });
+
+  const CreateAdBody = z.object({
+    accountId: z.string().min(1),
+    adsetId: z.string().min(1),
+    name: z.string().min(1).max(200),
+    creativeId: z.string().optional(),
+    status: z.enum(["PAUSED", "ACTIVE"]).optional()
+  });
+
+  app.post("/ads", async (req, reply) => {
+    const auth = await req.getAuth();
+    requireRole(auth, "ANALYST");
+    await assertActiveSubscription(auth.organizationId, auth.email);
+    const parsed = CreateAdBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ ok: false, error: "invalid_body", issues: parsed.error.issues });
+    const created = await createAd({ organizationId: auth.organizationId, userId: auth.userId, accountDbId: parsed.data.accountId, ...parsed.data });
+    return reply.code(201).send({ ok: true, id: created.id });
   });
 
   app.get("/insights/trend", async (req, reply) => {

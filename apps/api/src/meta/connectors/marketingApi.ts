@@ -26,11 +26,11 @@ export class MarketingApiConnector extends BaseConnector {
       [META_TOOLS.INSIGHTS_GET]: this.getInsights,
       [META_TOOLS.UPDATE_ENTITY]: this.updateEntity,
       [META_TOOLS.ACTIVATE_ENTITY]: this.activateEntity,
+      [META_TOOLS.CREATE_CAMPAIGN]: this.createCampaign,
+      [META_TOOLS.CREATE_AD_SET]: this.createAdSet,
+      [META_TOOLS.CREATE_AD]: this.createAd,
 
       // Stubs — surface a clear error until we wire each one in later phases.
-      [META_TOOLS.CREATE_CAMPAIGN]: notImpl(META_TOOLS.CREATE_CAMPAIGN, "Fase 4"),
-      [META_TOOLS.CREATE_AD_SET]: notImpl(META_TOOLS.CREATE_AD_SET, "Fase 4"),
-      [META_TOOLS.CREATE_AD]: notImpl(META_TOOLS.CREATE_AD, "Fase 4"),
       [META_TOOLS.INSIGHTS_TRENDS]: notImpl(META_TOOLS.INSIGHTS_TRENDS, "Fase 2"),
       [META_TOOLS.INSIGHTS_ANOMALIES]: notImpl(META_TOOLS.INSIGHTS_ANOMALIES, "Fase 2"),
       [META_TOOLS.INSIGHTS_BENCHMARKS]: notImpl(META_TOOLS.INSIGHTS_BENCHMARKS, "Fase 2"),
@@ -108,6 +108,62 @@ export class MarketingApiConnector extends BaseConnector {
     const id = String(args.id ?? args.entityId ?? "");
     if (!id) throw new Error("activateEntity: id required");
     return graphRequest(`/${id}`, { ...this.auth(), method: "POST", body: { status: "ACTIVE" } });
+  };
+
+  // ---------- Writes (Fase 4) ----------
+  // Per Meta's design, entities created via the API land PAUSED by default; we keep
+  // that as the safe default. Budgets are in the account currency's minor units (cents).
+
+  private createCampaign: ToolHandler = async (args) => {
+    const accountId = String(args.accountId ?? "");
+    if (!accountId) throw new Error("createCampaign: accountId required");
+    if (!args.name) throw new Error("createCampaign: name required");
+    if (!args.objective) throw new Error("createCampaign: objective required");
+    const body: Record<string, unknown> = {
+      name: args.name,
+      objective: args.objective,
+      status: args.status ?? "PAUSED",
+      special_ad_categories: args.specialAdCategories ?? [],
+      ...((args.fields as Record<string, unknown>) ?? {})
+    };
+    if (args.dailyBudget != null) body.daily_budget = args.dailyBudget;
+    if (args.lifetimeBudget != null) body.lifetime_budget = args.lifetimeBudget;
+    return graphRequest(`/${accountId}/campaigns`, { ...this.auth(), method: "POST", body });
+  };
+
+  private createAdSet: ToolHandler = async (args) => {
+    const accountId = String(args.accountId ?? "");
+    if (!accountId) throw new Error("createAdSet: accountId required");
+    if (!args.campaignId) throw new Error("createAdSet: campaignId required");
+    const body: Record<string, unknown> = {
+      name: args.name,
+      campaign_id: args.campaignId,
+      status: args.status ?? "PAUSED",
+      ...(args.dailyBudget != null ? { daily_budget: args.dailyBudget } : {}),
+      ...(args.lifetimeBudget != null ? { lifetime_budget: args.lifetimeBudget } : {}),
+      ...(args.billingEvent ? { billing_event: args.billingEvent } : {}),
+      ...(args.optimizationGoal ? { optimization_goal: args.optimizationGoal } : {}),
+      ...(args.bidAmount != null ? { bid_amount: args.bidAmount } : {}),
+      ...(args.targeting ? { targeting: args.targeting } : {}),
+      ...(args.startTime ? { start_time: args.startTime } : {}),
+      ...((args.fields as Record<string, unknown>) ?? {})
+    };
+    return graphRequest(`/${accountId}/adsets`, { ...this.auth(), method: "POST", body });
+  };
+
+  private createAd: ToolHandler = async (args) => {
+    const accountId = String(args.accountId ?? "");
+    if (!accountId) throw new Error("createAd: accountId required");
+    if (!args.adsetId) throw new Error("createAd: adsetId required");
+    const body: Record<string, unknown> = {
+      name: args.name,
+      adset_id: args.adsetId,
+      status: args.status ?? "PAUSED",
+      ...(args.creativeId ? { creative: { creative_id: args.creativeId } } : {}),
+      ...(args.creative ? { creative: args.creative } : {}),
+      ...((args.fields as Record<string, unknown>) ?? {})
+    };
+    return graphRequest(`/${accountId}/ads`, { ...this.auth(), method: "POST", body });
   };
 }
 

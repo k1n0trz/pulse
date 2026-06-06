@@ -99,5 +99,6 @@ docs/metaapi.txt
 docs/*credentials*
 docs/*secrets*
 docs/*.txt
+docs/temporal/
 **/credentials.json
 **/secrets.json

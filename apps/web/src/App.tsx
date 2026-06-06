@@ -1,13 +1,17 @@
 import { useMemo, useState } from "react";
-import { Activity, AlertTriangle, BarChart3, Bot, CalendarDays, FileText, Gauge, Layers3, Megaphone, Plus, ShieldCheck, Sparkles, Target, Zap } from "lucide-react";
+import { Activity, AlertTriangle, BarChart3, Bot, CalendarDays, FileText, Gauge, Layers3, Megaphone, Plus, ShieldCheck, Sparkles, Target, UserCircle, Zap } from "lucide-react";
 import { accountTrend, defaultPolicy, mockCampaigns } from "./agents/pulse/services/mockPulseData";
 import { createOptimizationPlan, runPulseAutopilot, auditAccount, buildExecutiveReport } from "@pulse/shared";
 import { ChatPulse } from "./agents/pulse/components/ChatPulse";
 import { CampaignTable } from "./agents/pulse/components/CampaignTable";
+import { CampaignManager } from "./agents/pulse/components/CampaignManager";
+import { AuditPanel } from "./agents/pulse/components/AuditPanel";
+import { ReportsGateway } from "./agents/pulse/components/ReportsGateway";
 import { CampaignWizard } from "./agents/pulse/components/CampaignWizard";
 import { DashboardCharts } from "./agents/pulse/components/DashboardCharts";
 import { ModeControl } from "./agents/pulse/components/ModeControl";
 import { AutopilotPanel } from "./agents/pulse/components/AutopilotPanel";
+import { LearningPanel } from "./agents/pulse/components/LearningPanel";
 import { MetaConnectionPanel } from "./agents/pulse/components/MetaConnectionPanel";
 import { ApprovalQueue } from "./agents/pulse/components/ApprovalQueue";
 import { ActivityTimeline } from "./agents/pulse/components/ActivityTimeline";
@@ -16,20 +20,23 @@ import { useCampaigns } from "./agents/pulse/hooks/useCampaigns";
 import { NotificationsButton } from "./agents/pulse/components/NotificationsButton";
 import { OnboardingChecklist } from "./agents/pulse/components/OnboardingChecklist";
 import { useAccountTrend } from "./agents/pulse/hooks/useAccountTrend";
-import { reports } from "./lib/api";
+import { useBilling } from "./agents/pulse/hooks/useBilling";
+import { PlansPaywall } from "./agents/pulse/components/PlansPaywall";
+import { ProfilePanel } from "./agents/pulse/components/ProfilePanel";
+import { useI18n } from "./i18n";
 import type { OperationMode } from "@pulse/shared";
-import { metaConnectorPrinciples } from "@pulse/shared";
 
-type Section = "inicio" | "campanas" | "autopilot" | "chat" | "auditoria" | "reportes" | "wizard";
+type Section = "inicio" | "campanas" | "autopilot" | "chat" | "auditoria" | "reportes" | "perfil" | "wizard";
 
 const nav = [
-  { id: "inicio", label: "Inicio", icon: Gauge },
-  { id: "campanas", label: "Campañas", icon: Megaphone },
-  { id: "autopilot", label: "Autopilot", icon: Zap },
-  { id: "chat", label: "Chat Pulse", icon: Bot },
-  { id: "auditoria", label: "Auditoría", icon: ShieldCheck },
-  { id: "reportes", label: "Reportes", icon: FileText }
-] satisfies Array<{ id: Section; label: string; icon: typeof Gauge }>;
+  { id: "inicio", icon: Gauge },
+  { id: "campanas", icon: Megaphone },
+  { id: "autopilot", icon: Zap },
+  { id: "chat", icon: Bot },
+  { id: "auditoria", icon: ShieldCheck },
+  { id: "reportes", icon: FileText },
+  { id: "perfil", icon: UserCircle }
+] satisfies Array<{ id: Section; icon: typeof Gauge }>;
 
 function money(value: number) {
   const abs = Math.abs(value);
@@ -65,14 +72,18 @@ function deltaCaption(pct: number | null, higherIsBetter = true): { caption: str
 }
 
 export function App() {
+  const { t } = useI18n();
   const [mode, setMode] = useState<OperationMode>("assisted");
   const [section, setSection] = useState<Section>("inicio");
   const [policy, setPolicy] = useState(defaultPolicy);
 
+  const billing = useBilling();
   const metaState = useMetaConnection();
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const liveCampaigns = useCampaigns({ enabled: Boolean(metaState.activeConnection) });
   const campaigns = liveCampaigns.campaigns.length > 0 ? liveCampaigns.campaigns : mockCampaigns;
   const usingLiveData = liveCampaigns.campaigns.length > 0;
+  const accounts = metaState.activeConnection?.accounts ?? [];
   const trendFallback = useMemo(() => accountTrend.map((t) => ({ ...t, results: t.conversions })), []);
   const { trend } = useAccountTrend({ enabled: Boolean(metaState.activeConnection), fallback: trendFallback });
 
@@ -95,6 +106,16 @@ export function App() {
   const dCpa = useMemo(() => deltaCaption(periodDelta(trend, "cpa", "avg"), false), [trend]);
   const dRoas = useMemo(() => deltaCaption(periodDelta(trend, "roas", "avg")), [trend]);
 
+  // Subscription gate: block the app behind the paywall when there's no active
+  // access (superadmins and orgs with an active subscription pass through).
+  if (billing.blocked) {
+    return (
+      <div className="paywall-screen">
+        <PlansPaywall billing={billing} />
+      </div>
+    );
+  }
+
   return (
     <div className="pulse-shell">
       <aside className="sidebar">
@@ -109,18 +130,18 @@ export function App() {
         </div>
 
         <div className="account-box">
-          <span>Cuenta publicitaria</span>
+          <span>{t("common.connectedAccount")}</span>
           {metaState.activeConnection?.accounts[0] ? (
             <>
               <strong>{metaState.activeConnection.accounts[0].name}</strong>
               <small>ID: {metaState.activeConnection.accounts[0].metaAccountId}</small>
-              <em>Conectado a Meta Ads · {metaState.activeConnection.accounts.length} cuentas</em>
+              <em>Meta Ads · {metaState.activeConnection.accounts.length}</em>
             </>
           ) : (
             <>
-              <strong>Sin conexión activa</strong>
-              <small>Pulse usa datos demo</small>
-              <em>Conecta Meta para datos reales</em>
+              <strong>{t("common.noConnection")}</strong>
+              <small>Pulse demo</small>
+              <em>{t("common.connectMeta")}</em>
             </>
           )}
         </div>
@@ -131,7 +152,7 @@ export function App() {
             return (
               <button key={item.id} className={section === item.id ? "active" : ""} onClick={() => setSection(item.id)}>
                 <Icon size={18} />
-                <span>{item.label}</span>
+                <span>{t(`nav.${item.id}`)}</span>
               </button>
             );
           })}
@@ -143,33 +164,47 @@ export function App() {
       <main className="workspace">
         <header className="topbar">
           <div>
-            <h1>{metaState.activeConnection?.accounts[0]?.name ? `Hola, ${metaState.activeConnection.accounts[0].name}` : "Resumen general"}</h1>
-            <p>Rendimiento y ejecución activa de campañas Meta Ads.</p>
+            <h1>{metaState.activeConnection?.accounts[0]?.name ? `${t("topbar.greeting")}, ${metaState.activeConnection.accounts[0].name}` : t("topbar.summary")}</h1>
+            <p>{t("topbar.subtitle")}</p>
           </div>
           <div className="topbar-actions">
+            {accounts.length > 0 && (
+              <label className="account-switcher" title={t("topbar.account")}>
+                <span>{t("topbar.account")}</span>
+                <select
+                  className="pulse-select"
+                  value={selectedAccountId ?? accounts[0]?.id ?? ""}
+                  onChange={(e) => setSelectedAccountId(e.target.value)}
+                >
+                  {accounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>{acc.name} · {acc.metaAccountId}</option>
+                  ))}
+                </select>
+              </label>
+            )}
             <NotificationsButton />
             <button className="ghost-button">
               <CalendarDays size={16} />
-              Ultimos 7 dias
+              {t("topbar.last7")}
             </button>
             <button className="ghost-button" onClick={() => setSection("auditoria")}>
               <ShieldCheck size={16} />
-              Auditar cuenta
+              {t("topbar.audit")}
             </button>
-            <button className="primary-button" onClick={() => setSection("wizard")}>
+            <button className="primary-button" onClick={() => void metaState.startConnect()} title={t("topbar.connect")}>
               <Plus size={17} />
-              Nueva campaña
+              {t("topbar.connect")}
             </button>
           </div>
         </header>
 
         <section className="metric-grid">
-          <Metric icon={BarChart3} label="Inversión total" value={money(spend)} change={dSpend.caption} tone={dSpend.tone} />
-          <Metric icon={Target} label="Resultados" value={results.toLocaleString("en-US")} change={dResults.caption} tone={dResults.tone} />
-          <Metric icon={AlertTriangle} label="CPA promedio" value={money(avgCpa)} change={dCpa.caption} tone={dCpa.tone} />
-          <Metric icon={Sparkles} label="ROAS" value={`${avgRoas}x`} change={dRoas.caption} tone={dRoas.tone} />
-          <Metric icon={Layers3} label="CTR / CPM" value={`${avgCtr}% / $${avgCpm}`} change="promedio de cuentas" tone="warn" />
-          <Metric icon={Megaphone} label="Campañas activas" value={String(campaigns.filter((c) => c.status === "active").length)} change={`${plan.alerts.length} alertas activas`} tone="warn" />
+          <Metric icon={BarChart3} label={t("metrics.spend")} value={money(spend)} change={dSpend.caption} tone={dSpend.tone} />
+          <Metric icon={Target} label={t("metrics.results")} value={results.toLocaleString("en-US")} change={dResults.caption} tone={dResults.tone} />
+          <Metric icon={AlertTriangle} label={t("metrics.cpa")} value={money(avgCpa)} change={dCpa.caption} tone={dCpa.tone} />
+          <Metric icon={Sparkles} label={t("metrics.roas")} value={`${avgRoas}x`} change={dRoas.caption} tone={dRoas.tone} />
+          <Metric icon={Layers3} label={t("metrics.ctrcpm")} value={`${avgCtr}% / $${avgCpm}`} change={t("metrics.accountAvg")} tone="warn" />
+          <Metric icon={Megaphone} label={t("metrics.activeCampaigns")} value={String(campaigns.filter((c) => c.status === "active").length)} change={`${plan.alerts.length} ${t("metrics.activeCampaigns").toLowerCase()}`} tone="warn" />
         </section>
 
         {section === "inicio" && (
@@ -197,11 +232,24 @@ export function App() {
           </div>
         )}
 
-        {section === "campanas" && <CampaignTable campaigns={campaigns} />}
-        {section === "autopilot" && <AutopilotPanel mode={mode} policy={policy} result={autopilot} onPolicyChange={setPolicy} expanded />}
+        {section === "campanas" && (
+          <CampaignManager
+            fallback={mockCampaigns}
+            accounts={accounts}
+            selectedAccountId={selectedAccountId}
+            onConnect={() => void metaState.startConnect()}
+          />
+        )}
+        {section === "autopilot" && (
+          <div className="autopilot-layout">
+            <AutopilotPanel mode={mode} policy={policy} result={autopilot} onPolicyChange={setPolicy} expanded />
+            <LearningPanel />
+          </div>
+        )}
         {section === "chat" && <ChatPulse mode={mode} />}
-        {section === "auditoria" && <AuditView audit={audit} />}
-        {section === "reportes" && <ReportsView report={report} connectorPrinciples={metaConnectorPrinciples} />}
+        {section === "auditoria" && <AuditPanel audit={audit} campaigns={campaigns} plan={plan} />}
+        {section === "reportes" && <ReportsGateway />}
+        {section === "perfil" && <ProfilePanel />}
         {section === "wizard" && <CampaignWizard />}
       </main>
     </div>
@@ -266,97 +314,4 @@ function RecommendationsPanel({ plan }: { plan: ReturnType<typeof createOptimiza
   );
 }
 
-function AuditView({ audit }: { audit: ReturnType<typeof auditAccount> }) {
-  const items = [
-    ["Estructura", audit.structure],
-    ["Tracking", audit.tracking],
-    ["Creatividad", audit.creative],
-    ["Presupuesto", audit.budget],
-    ["Segmentación", audit.audience]
-  ];
-
-  return (
-    <section className="single-view">
-      <div className="panel audit-hero">
-        <div>
-          <span>Score de cuenta</span>
-          <strong>{audit.score}/100</strong>
-          <p>Pulse evalua estructura, tracking, creatividades, presupuesto y segmentacion.</p>
-        </div>
-        <ShieldCheck size={96} />
-      </div>
-      <div className="audit-grid">
-        {items.map(([label, value]) => (
-          <article className="panel audit-card" key={label}>
-            <span>{label}</span>
-            <strong>{value}</strong>
-            <div className="bar"><i style={{ width: `${value}%` }} /></div>
-          </article>
-        ))}
-      </div>
-      <section className="panel">
-        <h2>Hallazgos</h2>
-        <div className="stack">
-          {audit.findings.map((finding) => <p className="finding" key={finding}>{finding}</p>)}
-        </div>
-      </section>
-    </section>
-  );
-}
-
-function ReportsView({ report, connectorPrinciples }: { report: ReturnType<typeof buildExecutiveReport>; connectorPrinciples: string[] }) {
-  const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const run = async (key: string, fn: () => Promise<void>) => {
-    setBusy(key);
-    setError(null);
-    try {
-      await fn();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  return (
-    <section className="single-view">
-      <div className="report-grid">
-        <article className="panel report-card">
-          <FileText size={34} />
-          <h2>Reporte ejecutivo</h2>
-          <p>Inversión {money(report.spend)} · ROAS {report.roas}x · Score {report.accountScore}/100</p>
-          <div className="report-actions">
-            <button disabled={busy !== null} onClick={() => void run("pdf", reports.executivePdf)}>
-              {busy === "pdf" ? "Generando…" : "Exportar PDF"}
-            </button>
-            <button disabled={busy !== null} onClick={() => void run("xlsx", reports.executiveXlsx)}>
-              {busy === "xlsx" ? "Generando…" : "Exportar XLSX"}
-            </button>
-          </div>
-        </article>
-        <article className="panel report-card">
-          <BarChart3 size={34} />
-          <h2>Reporte de campañas</h2>
-          <p>Tabla completa de campañas con métricas, lista para compartir o analizar.</p>
-          <div className="report-actions">
-            <button disabled={busy !== null} onClick={() => void run("csv", reports.campaignsCsv)}>
-              {busy === "csv" ? "Generando…" : "Exportar CSV"}
-            </button>
-            <button disabled={busy !== null} onClick={() => void run("camp-xlsx", reports.campaignsXlsx)}>
-              {busy === "camp-xlsx" ? "Generando…" : "Exportar XLSX"}
-            </button>
-          </div>
-        </article>
-      </div>
-      {error && <p className="error-text">{error}</p>}
-      <section className="panel">
-        <h2>Compatibilidad Meta Ads AI Connectors</h2>
-        <div className="connector-list">
-          {connectorPrinciples.map((item) => <p key={item}>{item}</p>)}
-        </div>
-      </section>
-    </section>
-  );
-}
+// Reports moved to the ReportsGateway component (Fase 7).

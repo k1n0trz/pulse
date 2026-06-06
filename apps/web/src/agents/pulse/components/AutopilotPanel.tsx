@@ -1,8 +1,51 @@
-import { ShieldCheck, SlidersHorizontal, Zap } from "lucide-react";
+import { useCallback, useState } from "react";
+import { Loader2, Play, ShieldCheck, SlidersHorizontal, Zap } from "lucide-react";
 import type { AutopilotPolicy, OperationMode } from "@pulse/shared";
 import type { AutopilotRunResult } from "@pulse/shared";
+import { api } from "../../../lib/api";
 
 export function AutopilotPanel({ mode, policy, result, onPolicyChange, expanded = false }: { mode: OperationMode; policy: AutopilotPolicy; result: AutopilotRunResult; onPolicyChange: (policy: AutopilotPolicy) => void; expanded?: boolean }) {
+  const [busy, setBusy] = useState(false);
+  const [runMsg, setRunMsg] = useState<string | null>(null);
+  const [runErr, setRunErr] = useState<string | null>(null);
+
+  const execute = mode === "autopilot";
+  const disabledReason = mode === "read"
+    ? "Modo lectura: Pulse solo analiza, no ejecuta."
+    : policy.killSwitch
+      ? "Kill switch activo: ejecución bloqueada."
+      : null;
+
+  const run = useCallback(async () => {
+    setBusy(true);
+    setRunMsg(null);
+    setRunErr(null);
+    try {
+      const { recommendations } = await api.recommendations.list({ status: "OPEN", limit: 50 });
+      if (recommendations.length === 0) {
+        setRunMsg("No hay acciones pendientes. Pídele optimizaciones a Pulse desde el chat.");
+        return;
+      }
+      let processed = 0;
+      let skipped = 0;
+      for (const rec of recommendations) {
+        // In autopilot, critical changes still require human review.
+        if (execute && rec.severity === "CRITICAL") { skipped++; continue; }
+        await api.recommendations.approve(rec.id, { execute });
+        processed++;
+      }
+      setRunMsg(
+        execute
+          ? `${processed} acción(es) ejecutada(s)${skipped ? ` · ${skipped} crítica(s) requieren revisión` : ""}.`
+          : `${processed} acción(es) aprobada(s) y en cola de ejecución.`
+      );
+    } catch (err) {
+      setRunErr((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }, [execute]);
+
   return (
     <section className={`panel autopilot-panel ${expanded ? "full-view" : ""}`}>
       <div className="panel-head">
@@ -15,6 +58,21 @@ export function AutopilotPanel({ mode, policy, result, onPolicyChange, expanded 
           <strong>{result.executedActions.length} ejecutadas · {result.pendingApprovals.length} pendientes</strong>
           <p>{result.blockedReasons[0] ?? "Políticas activas y registro completo de acciones."}</p>
         </div>
+      </div>
+
+      <div className="autopilot-run">
+        <button
+          className="primary-button"
+          onClick={() => void run()}
+          disabled={busy || disabledReason !== null}
+          title={disabledReason ?? (execute ? "Ejecuta las acciones pendientes contra Meta dentro de tus límites." : "Aprueba y encola las acciones pendientes para revisión.")}
+        >
+          {busy ? <Loader2 size={16} className="spin" /> : <Play size={16} />}
+          {busy ? "Procesando…" : execute ? "Ejecutar autopilot ahora" : "Preparar acciones"}
+        </button>
+        {disabledReason && <small className="muted-inline">{disabledReason}</small>}
+        {runMsg && <small className="run-ok">{runMsg}</small>}
+        {runErr && <small className="error-text">{runErr}</small>}
       </div>
 
       <div className="policy-grid">

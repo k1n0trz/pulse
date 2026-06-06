@@ -5,38 +5,68 @@ import type { PlanTier, Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma.js";
 import { requireRole } from "../auth/context.js";
 import { PLANS, planForPriceId } from "../lib/plans.js";
+import { isSuperadmin } from "../lib/superadmin.js";
+import { isSubscriptionActive } from "../lib/entitlements.js";
 import {
   createBillingPortalSession,
   createCheckoutSession,
   constructWebhookEvent,
   isStripeConfigured
 } from "../services/stripe.js";
+import {
+  createMercadoPagoCheckout,
+  getPayment,
+  isMercadoPagoConfigured,
+  mapPaymentStatus,
+  verifyWebhookSignature
+} from "../services/mercadopago.js";
 
 const CheckoutBody = z.object({
   tier: z.enum(["SOLO", "AGENCY", "SCALE"])
 });
 
 export const billingRoutes: FastifyPluginAsync = async (app) => {
-  // Public-ish: plan catalog + whether checkout is available.
+  // Public-ish: plan catalog + which payment providers are available.
   app.get("/billing/config", async () => ({
-    configured: isStripeConfigured(),
+    configured: isStripeConfigured() || isMercadoPagoConfigured(),
+    providers: {
+      stripe: isStripeConfigured(),
+      mercadopago: isMercadoPagoConfigured()
+    },
     plans: Object.values(PLANS).map((p) => ({
       tier: p.tier,
       name: p.name,
       monthlyUsd: p.monthlyUsd,
       limits: p.limits,
-      purchasable: Boolean(p.stripePriceId)
+      purchasable: Boolean(p.stripePriceId) || isMercadoPagoConfigured()
     }))
   }));
 
   app.get("/billing/status", async (req) => {
-    const { organizationId } = await req.getAuth();
+    const { organizationId, email } = await req.getAuth();
     const org = await prisma.organization.findUniqueOrThrow({
       where: { id: organizationId },
-      select: { plan: true, subscriptionStatus: true, trialEndsAt: true, currentPeriodEnd: true, stripeCustomerId: true }
+      select: {
+        plan: true,
+        subscriptionStatus: true,
+        trialEndsAt: true,
+        currentPeriodEnd: true,
+        stripeCustomerId: true,
+        paymentProvider: true
+      }
     });
-    return { ok: true, ...org, hasCustomer: Boolean(org.stripeCustomerId) };
+    const superadmin = isSuperadmin(email);
+    const active = superadmin || isSubscriptionActive(org);
+    return {
+      ok: true,
+      ...org,
+      hasCustomer: Boolean(org.stripeCustomerId),
+      isSuperadmin: superadmin,
+      active
+    };
   });
+
+  // ---------- Stripe ----------
 
   app.post("/billing/checkout", async (req, reply) => {
     const auth = await req.getAuth();
@@ -70,8 +100,35 @@ export const billingRoutes: FastifyPluginAsync = async (app) => {
     return { ok: true, url };
   });
 
-  // Webhook — needs the raw body for signature verification, so it lives in an
-  // encapsulated sub-plugin with a buffer content-type parser.
+  // ---------- MercadoPago ----------
+
+  app.post("/billing/mercadopago/checkout", async (req, reply) => {
+    const auth = await req.getAuth();
+    requireRole(auth, "ADMIN");
+    if (!isMercadoPagoConfigured()) return reply.code(503).send({ ok: false, error: "mercadopago_not_configured" });
+    const parsed = CheckoutBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ ok: false, error: "invalid_body" });
+
+    const { url, preferenceId } = await createMercadoPagoCheckout({
+      tier: parsed.data.tier,
+      organizationId: auth.organizationId,
+      payerEmail: auth.email
+    });
+
+    // Mark intent — the webhook grants access once the payment is approved.
+    // Correlation happens via external_reference (organizationId:tier) on the payment.
+    await prisma.organization.update({
+      where: { id: auth.organizationId },
+      data: { mpPayerEmail: auth.email, paymentProvider: "mercadopago" }
+    });
+
+    return { ok: true, url, preferenceId };
+  });
+
+  // ---------- Webhooks ----------
+
+  // Stripe webhook — needs the raw body for signature verification, so it lives
+  // in an encapsulated sub-plugin with a buffer content-type parser.
   app.register(async (instance) => {
     instance.addContentTypeParser("application/json", { parseAs: "buffer" }, (_req, body, done) => {
       done(null, body);
@@ -99,7 +156,67 @@ export const billingRoutes: FastifyPluginAsync = async (app) => {
       return { received: true };
     });
   });
+
+  // MercadoPago webhook (Checkout Pro) — JSON body { type/topic, data: { id } }
+  // (id may also arrive as ?data.id= / ?id= / ?topic= query params). Signature is
+  // over a manifest, not the body. notification_url is set per-preference.
+  app.post("/billing/mercadopago/webhook", async (req, reply) => {
+    const query = req.query as Record<string, string | undefined>;
+    const body = (req.body ?? {}) as { type?: string; topic?: string; action?: string; data?: { id?: string } };
+    const type = body.type ?? body.topic ?? query.type ?? query.topic;
+    const dataId = body.data?.id ?? query["data.id"] ?? query.id;
+
+    const ok = verifyWebhookSignature({
+      signatureHeader: req.headers["x-signature"] as string | undefined,
+      requestId: req.headers["x-request-id"] as string | undefined,
+      dataId
+    });
+    if (!ok) {
+      app.log.warn("MercadoPago webhook signature verification failed");
+      return reply.code(401).send({ ok: false, error: "invalid_signature" });
+    }
+
+    if (!dataId || type !== "payment") {
+      // Ignore unrelated topics (merchant_order, plan, etc.) — ack so MP stops retrying.
+      return { received: true };
+    }
+
+    try {
+      await handleMpPayment(dataId);
+    } catch (error) {
+      app.log.error({ err: error, dataId }, "MercadoPago webhook handler failed");
+      return reply.code(500).send({ ok: false });
+    }
+    return { received: true };
+  });
 };
+
+async function handleMpPayment(paymentId: string) {
+  const payment = await getPayment(paymentId);
+
+  // organizationId:tier encoded in external_reference at checkout time.
+  const [organizationId, tier] = (payment.external_reference ?? "").split(":");
+  if (!organizationId) return;
+
+  const status = mapPaymentStatus(payment.status);
+  const isPaid = status === "active";
+
+  // Checkout Pro is one payment = one month. Grant the plan until +1 month.
+  const periodEnd = new Date();
+  periodEnd.setMonth(periodEnd.getMonth() + 1);
+
+  const data: Prisma.OrganizationUpdateManyMutationInput = {
+    paymentProvider: "mercadopago",
+    subscriptionStatus: status,
+    mpPreapprovalId: String(payment.id),
+    ...(payment.payer?.email ? { mpPayerEmail: payment.payer.email } : {}),
+    ...(isPaid && tier ? { plan: tier as PlanTier, currentPeriodEnd: periodEnd } : {}),
+    ...(status === "canceled" ? { plan: "FREE" as PlanTier } : {})
+  };
+
+  await prisma.organization.updateMany({ where: { id: organizationId }, data });
+  await audit(organizationId, "billing.mercadopago.payment", `MercadoPago payment ${payment.status}`);
+}
 
 async function handleStripeEvent(event: Stripe.Event) {
   switch (event.type) {
@@ -110,6 +227,7 @@ async function handleStripeEvent(event: Stripe.Event) {
       await prisma.organization.update({
         where: { id: organizationId },
         data: {
+          paymentProvider: "stripe",
           stripeCustomerId: typeof session.customer === "string" ? session.customer : undefined,
           stripeSubscriptionId: typeof session.subscription === "string" ? session.subscription : undefined
         }

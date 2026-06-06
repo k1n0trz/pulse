@@ -95,7 +95,59 @@ export interface CampaignDTO {
   windowStart: string;
   windowEnd: string;
   capturedAt: string;
-  account: { metaAccountId: string; name: string; currency: string } | null;
+  account: { id: string; metaAccountId: string; name: string; currency: string } | null;
+}
+
+export interface CampaignListParams {
+  organizationId?: string;
+  accountId?: string;
+  status?: string;
+  objective?: string;
+  q?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  page?: number;
+  pageSize?: number;
+  limit?: number;
+}
+
+export interface CampaignListResponse {
+  ok: boolean;
+  organizationId: string;
+  count: number;
+  total?: number;
+  page?: number;
+  pageSize?: number;
+  totalPages?: number;
+  campaigns: CampaignDTO[];
+}
+
+export interface CreateCampaignBody {
+  accountId: string;
+  name: string;
+  objective: string;
+  status?: "PAUSED" | "ACTIVE";
+  dailyBudget?: number;
+  specialAdCategories?: string[];
+}
+
+export interface CreateAdSetBody {
+  accountId: string;
+  campaignId: string;
+  name: string;
+  dailyBudget?: number;
+  billingEvent?: string;
+  optimizationGoal?: string;
+  targeting?: Record<string, unknown>;
+  status?: "PAUSED" | "ACTIVE";
+}
+
+export interface CreateAdBody {
+  accountId: string;
+  adsetId: string;
+  name: string;
+  creativeId?: string;
+  status?: "PAUSED" | "ACTIVE";
 }
 
 export const api = {
@@ -125,15 +177,30 @@ export const api = {
   },
 
   campaigns: {
-    list: (params?: { organizationId?: string; accountId?: string; limit?: number }) => {
+    list: (params?: CampaignListParams) => {
       const q = new URLSearchParams();
       if (params?.organizationId) q.set("organizationId", params.organizationId);
       if (params?.accountId) q.set("accountId", params.accountId);
+      if (params?.status) q.set("status", params.status);
+      if (params?.objective) q.set("objective", params.objective);
+      if (params?.q) q.set("q", params.q);
+      if (params?.dateFrom) q.set("dateFrom", params.dateFrom);
+      if (params?.dateTo) q.set("dateTo", params.dateTo);
+      if (params?.page) q.set("page", String(params.page));
+      if (params?.pageSize) q.set("pageSize", String(params.pageSize));
       if (params?.limit) q.set("limit", String(params.limit));
-      return request<{ ok: boolean; organizationId: string; count: number; campaigns: CampaignDTO[] }>(
-        `/v1/campaigns${q.toString() ? `?${q.toString()}` : ""}`
-      );
-    }
+      return request<CampaignListResponse>(`/v1/campaigns${q.toString() ? `?${q.toString()}` : ""}`);
+    },
+    create: (body: CreateCampaignBody) =>
+      request<{ ok: boolean; id: string }>("/v1/campaigns", { method: "POST", body: JSON.stringify(body) }),
+    update: (id: string, body: { name?: string; dailyBudget?: number; status?: "PAUSED" | "ACTIVE" }) =>
+      request<{ ok: boolean }>(`/v1/campaigns/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+    setStatus: (id: string, status: "PAUSED" | "ACTIVE") =>
+      request<{ ok: boolean }>(`/v1/campaigns/${id}/status`, { method: "POST", body: JSON.stringify({ status }) }),
+    createAdSet: (body: CreateAdSetBody) =>
+      request<{ ok: boolean; id: string }>("/v1/ad-sets", { method: "POST", body: JSON.stringify(body) }),
+    createAd: (body: CreateAdBody) =>
+      request<{ ok: boolean; id: string }>("/v1/ads", { method: "POST", body: JSON.stringify(body) })
   },
 
   ai: {
@@ -149,9 +216,10 @@ export const api = {
   },
 
   billing: {
-    config: () => request<{ configured: boolean; plans: Array<{ tier: string; name: string; monthlyUsd: number; purchasable: boolean }> }>("/v1/billing/config"),
-    status: () => request<{ ok: boolean; plan: string; subscriptionStatus: string | null; trialEndsAt: string | null; hasCustomer: boolean }>("/v1/billing/status"),
-    checkout: (tier: "SOLO" | "AGENCY" | "SCALE") => request<{ ok: boolean; url: string }>("/v1/billing/checkout", { method: "POST", body: JSON.stringify({ tier }) }),
+    config: () => request<BillingConfigDTO>("/v1/billing/config"),
+    status: () => request<BillingStatusDTO>("/v1/billing/status"),
+    checkout: (tier: PlanTier) => request<{ ok: boolean; url: string }>("/v1/billing/checkout", { method: "POST", body: JSON.stringify({ tier }) }),
+    mercadopagoCheckout: (tier: PlanTier) => request<{ ok: boolean; url: string; preferenceId: string }>("/v1/billing/mercadopago/checkout", { method: "POST", body: JSON.stringify({ tier }) }),
     portal: () => request<{ ok: boolean; url: string }>("/v1/billing/portal", { method: "POST", body: "{}" })
   },
 
@@ -206,6 +274,28 @@ export const api = {
     markAllRead: () => request<{ ok: boolean; updated: number }>("/v1/notifications/read-all", { method: "POST", body: "{}" })
   },
 
+  learning: {
+    get: () => request<{ ok: boolean; weights: RuleWeightDTO[] }>("/v1/learning"),
+    evaluate: () => request<{ ok: boolean; evaluated: number; windowDays: number; weights: RuleWeightDTO[] }>("/v1/learning/evaluate", { method: "POST", body: "{}" })
+  },
+
+  competitive: {
+    search: (q: string, country?: string, limit?: number) => {
+      const params = new URLSearchParams({ q });
+      if (country) params.set("country", country);
+      if (limit) params.set("limit", String(limit));
+      return request<CompetitiveResultDTO>(`/v1/competitive/ads?${params.toString()}`);
+    }
+  },
+
+  conversations: {
+    list: () => request<{ ok: boolean; conversations: ConversationSummary[] }>("/v1/conversations"),
+    create: (title?: string) => request<{ ok: boolean; conversation: ConversationSummary }>("/v1/conversations", { method: "POST", body: JSON.stringify({ title }) }),
+    get: (id: string) => request<{ ok: boolean; conversation: ConversationSummary; messages: StoredChatMessage[] }>(`/v1/conversations/${id}`),
+    rename: (id: string, title: string) => request<{ ok: boolean }>(`/v1/conversations/${id}`, { method: "PATCH", body: JSON.stringify({ title }) }),
+    remove: (id: string) => request<{ ok: boolean }>(`/v1/conversations/${id}`, { method: "DELETE" })
+  },
+
   me: {
     get: () => request<{ ok: boolean; user: MeUserDTO; organization: { id: string; slug: string; name: string }; preferences: Array<{ id: string; category: string; channels: string[] }> }>("/v1/me"),
     registerOneSignal: (externalUserId: string) =>
@@ -226,6 +316,35 @@ export interface MeUserDTO {
   email: string;
   name: string | null;
   oneSignalExternalId: string | null;
+  isSuperadmin?: boolean;
+}
+
+export type PlanTier = "SOLO" | "AGENCY" | "SCALE";
+
+export interface PlanCatalogEntry {
+  tier: string;
+  name: string;
+  monthlyUsd: number;
+  purchasable: boolean;
+  limits: { maxAdAccounts: number; maxUsers: number; autopilot: boolean; whiteLabelReports: boolean; apiAccess: boolean };
+}
+
+export interface BillingConfigDTO {
+  configured: boolean;
+  providers: { stripe: boolean; mercadopago: boolean };
+  plans: PlanCatalogEntry[];
+}
+
+export interface BillingStatusDTO {
+  ok: boolean;
+  plan: string;
+  subscriptionStatus: string | null;
+  trialEndsAt: string | null;
+  currentPeriodEnd: string | null;
+  paymentProvider: string | null;
+  hasCustomer: boolean;
+  isSuperadmin: boolean;
+  active: boolean;
 }
 
 export interface TrendPoint {
@@ -242,6 +361,7 @@ export interface EntitlementsDTO {
   plan: { tier: string; name: string; monthlyUsd: number; limits: { maxAdAccounts: number; maxUsers: number; autopilot: boolean; whiteLabelReports: boolean; apiAccess: boolean } };
   usage: { adAccounts: number; users: number };
   can: { addAdAccount: boolean; addUser: boolean; useAutopilot: boolean; whiteLabelReports: boolean; apiAccess: boolean };
+  superadmin?: boolean;
 }
 
 export interface RecommendationDTO {
@@ -314,11 +434,36 @@ export async function downloadReport(path: string): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
+export interface ReportFilters {
+  accountIds?: string[];
+  businessId?: string;
+  campaignIds?: string[];
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export interface ReportOptionsDTO {
+  ok: boolean;
+  portfolios: Array<{ businessId: string; accounts: number }>;
+  accounts: Array<{ id: string; name: string; businessId: string | null }>;
+  campaigns: Array<{ id: string; name: string; accountId: string }>;
+}
+
+function reportQuery(format: string, f?: ReportFilters): string {
+  const p = new URLSearchParams({ format });
+  if (f?.accountIds?.length) p.set("accountIds", f.accountIds.join(","));
+  if (f?.businessId) p.set("businessId", f.businessId);
+  if (f?.campaignIds?.length) p.set("campaignIds", f.campaignIds.join(","));
+  if (f?.dateFrom) p.set("dateFrom", f.dateFrom);
+  if (f?.dateTo) p.set("dateTo", f.dateTo);
+  return p.toString();
+}
+
 export const reports = {
-  executivePdf: () => downloadReport("/v1/reports/executive?format=pdf"),
-  executiveXlsx: () => downloadReport("/v1/reports/executive?format=xlsx"),
-  campaignsCsv: () => downloadReport("/v1/reports/campaigns?format=csv"),
-  campaignsXlsx: () => downloadReport("/v1/reports/campaigns?format=xlsx")
+  options: () => request<ReportOptionsDTO>("/v1/reports/options"),
+  executivePdf: (f?: ReportFilters) => downloadReport(`/v1/reports/executive?${reportQuery("pdf", f)}`),
+  executiveXlsx: (f?: ReportFilters) => downloadReport(`/v1/reports/executive?${reportQuery("xlsx", f)}`),
+  campaignsXlsx: (f?: ReportFilters) => downloadReport(`/v1/reports/campaigns?${reportQuery("xlsx", f)}`)
 };
 
 // ---------- Chat streaming ----------
@@ -332,10 +477,66 @@ export type AgentStreamEvent =
   | { type: "error"; message: string }
   | { type: "done"; text: string; toolCalls: Array<{ name: string; ok: boolean; recommendationId?: string }>; usage: { input: number; output: number; cacheRead: number; cacheCreation: number } };
 
+export type ChatAttachment =
+  | { kind: "image"; mediaType: string; data: string; name?: string }
+  | { kind: "document"; mediaType: string; data: string; name?: string };
+
 export interface ChatStreamInput {
-  messages: Array<{ role: "user" | "assistant"; content: string }>;
+  messages: Array<{ role: "user" | "assistant"; content: string; attachments?: ChatAttachment[] }>;
   mode: "read" | "assisted" | "autopilot";
   organizationId?: string;
+  conversationId?: string;
+}
+
+export interface RuleWeightDTO {
+  rule: string;
+  weight: number;
+  samples: number;
+}
+
+export interface CompetitorAdDTO {
+  pageName: string;
+  body: string;
+  linkTitle: string | null;
+  snapshotUrl: string | null;
+  platforms: string[];
+}
+
+export interface CompetitiveResultDTO {
+  ok: boolean;
+  source: "live" | "demo";
+  query: string;
+  country: string;
+  ads: CompetitorAdDTO[];
+  insights: {
+    totalAds: number;
+    topAdvertisers: Array<{ pageName: string; ads: number }>;
+    platforms: Array<{ platform: string; ads: number }>;
+  };
+  note?: string;
+}
+
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messageCount?: number;
+}
+
+export interface StoredAttachmentMeta {
+  kind: "image" | "document";
+  mediaType: string;
+  name: string | null;
+}
+
+export interface StoredChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  attachments: StoredAttachmentMeta[];
+  toolEvents: Array<{ name: string; ok: boolean; recommendationId?: string | null }>;
+  createdAt: string;
 }
 
 export async function streamChat(input: ChatStreamInput, onEvent: (event: AgentStreamEvent) => void, signal?: AbortSignal): Promise<void> {

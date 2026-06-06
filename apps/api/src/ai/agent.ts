@@ -19,13 +19,19 @@ import { PULSE_SYSTEM_PROMPT } from "./systemPrompt.js";
 import { prisma } from "../db/prisma.js";
 import { logger } from "../lib/logger.js";
 
-export type ChatMessageInput = { role: "user" | "assistant"; content: string };
+export type ChatAttachment =
+  | { kind: "image"; mediaType: string; data: string }
+  | { kind: "document"; mediaType: string; data: string; name?: string };
+
+export type ChatMessageInput = { role: "user" | "assistant"; content: string; attachments?: ChatAttachment[] };
 
 export interface AgentRunOptions {
   organizationId: string;
   mode: OperationMode;
   policy: AutopilotPolicy;
   conversation: ChatMessageInput[];
+  /** Learned per-rule weights (Fase 9) — bias the agent toward proven strategies. */
+  ruleWeights?: Record<string, number>;
   /** Max agentic-loop iterations to prevent runaway tool use. */
   maxIterations?: number;
   /** Streaming callback — receives incremental events. */
@@ -48,7 +54,19 @@ export interface AgentRunResult {
   toolCalls: Array<{ name: string; input: Record<string, unknown>; ok: boolean; recommendationId?: string }>;
 }
 
-function contextReminder(orgId: string, mode: OperationMode, policy: AutopilotPolicy): string {
+function learnedRulesBlock(ruleWeights?: Record<string, number>): string {
+  if (!ruleWeights || Object.keys(ruleWeights).length === 0) return "";
+  const sorted = Object.entries(ruleWeights).sort((a, b) => b[1] - a[1]);
+  const top = sorted.slice(0, 4).map(([r, w]) => `${r} (${w.toFixed(2)})`).join(", ");
+  const bottom = sorted.slice(-2).map(([r, w]) => `${r} (${w.toFixed(2)})`).join(", ");
+  return `
+Learned strategy weights (from this account's executed-decision outcomes — higher = more reliable here):
+  - prioritize: ${top}
+  - apply with caution: ${bottom}
+When proposing optimizations, prefer higher-weighted rules and be more conservative with low-weighted ones.`;
+}
+
+function contextReminder(orgId: string, mode: OperationMode, policy: AutopilotPolicy, ruleWeights?: Record<string, number>): string {
   return `<system-reminder>
 Active organization: ${orgId}
 Operating mode: ${mode}
@@ -59,12 +77,33 @@ Policy:
   - max daily spend: ${policy.maxDailySpend}
   - max daily changes: ${policy.maxDailyChanges}
   - kill switch: ${policy.killSwitch ? "ENABLED — refuse mutations" : "off"}
-  - block critical campaigns: ${policy.blockedCriticalCampaigns}
+  - block critical campaigns: ${policy.blockedCriticalCampaigns}${learnedRulesBlock(ruleWeights)}
 </system-reminder>`;
 }
 
-function toClaudeMessages(conversation: ChatMessageInput[], orgId: string, mode: OperationMode, policy: AutopilotPolicy): Anthropic.MessageParam[] {
-  const reminder = contextReminder(orgId, mode, policy);
+// Builds a message's content: a plain string when there are no attachments, or
+// a block array (images/documents + text) for multimodal user turns.
+function buildContent(text: string, attachments?: ChatAttachment[]): string | Anthropic.ContentBlockParam[] {
+  if (!attachments || attachments.length === 0) return text;
+  const blocks: Anthropic.ContentBlockParam[] = [];
+  for (const att of attachments) {
+    if (att.kind === "image") {
+      blocks.push({ type: "image", source: { type: "base64", media_type: att.mediaType as "image/png", data: att.data } });
+    } else {
+      blocks.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: att.data }, ...(att.name ? { title: att.name } : {}) } as Anthropic.ContentBlockParam);
+    }
+  }
+  if (text) blocks.push({ type: "text", text });
+  return blocks;
+}
+
+function withReminder(content: string | Anthropic.ContentBlockParam[], reminder: string): string | Anthropic.ContentBlockParam[] {
+  if (typeof content === "string") return `${reminder}\n\n${content}`;
+  return [{ type: "text", text: reminder }, ...content];
+}
+
+function toClaudeMessages(conversation: ChatMessageInput[], orgId: string, mode: OperationMode, policy: AutopilotPolicy, ruleWeights?: Record<string, number>): Anthropic.MessageParam[] {
+  const reminder = contextReminder(orgId, mode, policy, ruleWeights);
   if (conversation.length === 0) {
     return [{ role: "user", content: reminder }];
   }
@@ -73,11 +112,12 @@ function toClaudeMessages(conversation: ChatMessageInput[], orgId: string, mode:
   const out: Anthropic.MessageParam[] = [];
   let injected = false;
   for (const msg of conversation) {
+    const content = buildContent(msg.content, msg.attachments);
     if (!injected && msg.role === "user") {
-      out.push({ role: "user", content: `${reminder}\n\n${msg.content}` });
+      out.push({ role: "user", content: withReminder(content, reminder) });
       injected = true;
     } else {
-      out.push({ role: msg.role, content: msg.content });
+      out.push({ role: msg.role, content });
     }
   }
   if (!injected) out.unshift({ role: "user", content: reminder });
@@ -97,7 +137,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     allowExecution: mode === "autopilot" && !policy.killSwitch
   };
 
-  const messages: Anthropic.MessageParam[] = toClaudeMessages(conversation, organizationId, mode, policy);
+  const messages: Anthropic.MessageParam[] = toClaudeMessages(conversation, organizationId, mode, policy, opts.ruleWeights);
 
   const toolCalls: AgentRunResult["toolCalls"] = [];
   const usage = { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 };

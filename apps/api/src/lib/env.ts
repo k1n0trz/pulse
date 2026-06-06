@@ -44,6 +44,10 @@ const EnvSchema = z.object({
   // Frontend (used to redirect users back after OAuth)
   WEB_APP_URL: z.string().url().default("http://localhost:5173"),
 
+  // Public URL of THIS API (used for payment webhook notification_url). In
+  // production set it to e.g. https://api.pulseads.app. Optional in dev.
+  API_PUBLIC_URL: z.string().url().optional(),
+
   // Sync scheduler
   ENABLE_SYNC_SCHEDULER: z
     .string()
@@ -63,6 +67,21 @@ const EnvSchema = z.object({
   STRIPE_PRICE_SCALE: z.string().optional(),
   BILLING_SUCCESS_URL: z.string().default("http://localhost:5173/billing/success"),
   BILLING_CANCEL_URL: z.string().default("http://localhost:5173/billing/cancel"),
+
+  // Billing — MercadoPago (LATAM). When unset, MercadoPago endpoints return not_configured.
+  // Charges in USD; see docs/temporal/mercadopago.txt for the production credentials.
+  MERCADOPAGO_ACCESS_TOKEN: z.string().optional(),
+  MERCADOPAGO_PUBLIC_KEY: z.string().optional(),
+  // Secret used to verify MercadoPago webhook signatures (x-signature). Optional.
+  MERCADOPAGO_WEBHOOK_SECRET: z.string().optional(),
+  // Currency charged through MercadoPago (USD per product decision).
+  MERCADOPAGO_CURRENCY: z.string().default("USD"),
+
+  // Superadmin emails — permanent full access, bypasses billing/entitlements.
+  SUPERADMIN_EMAILS: z
+    .string()
+    .default("kinotrance@gmail.com")
+    .transform((v) => v.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean)),
 
   // Notifications & queues (Fase 3)
   ONESIGNAL_APP_ID: z.string().optional(),

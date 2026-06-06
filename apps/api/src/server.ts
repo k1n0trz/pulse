@@ -19,6 +19,9 @@ import { meRoutes } from "./routes/me.js";
 import { reportRoutes } from "./routes/reports.js";
 import { billingRoutes } from "./routes/billing.js";
 import { entitlementRoutes } from "./routes/entitlements.js";
+import { conversationRoutes } from "./routes/conversations.js";
+import { competitiveRoutes } from "./routes/competitive.js";
+import { learningRoutes } from "./routes/learning.js";
 import { authPlugin } from "./auth/plugin.js";
 import { startScheduler, stopScheduler } from "./jobs/scheduler.js";
 import { shutdownQueue } from "./jobs/queue.js";
@@ -28,7 +31,7 @@ export async function buildServer() {
   const app = Fastify({
     loggerInstance: logger,
     trustProxy: true,
-    bodyLimit: 1_048_576, // 1 MiB
+    bodyLimit: 16_777_216, // 16 MiB — chat attachments (images/docs) travel as base64
     disableRequestLogging: false
   });
 
@@ -57,6 +60,9 @@ export async function buildServer() {
   await app.register(reportRoutes, { prefix: "/v1" });
   await app.register(billingRoutes, { prefix: "/v1" });
   await app.register(entitlementRoutes, { prefix: "/v1" });
+  await app.register(conversationRoutes, { prefix: "/v1" });
+  await app.register(competitiveRoutes, { prefix: "/v1" });
+  await app.register(learningRoutes, { prefix: "/v1" });
 
   app.setErrorHandler((error: FastifyError, _req, reply) => {
     const status = error.statusCode ?? 500;

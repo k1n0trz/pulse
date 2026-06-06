@@ -1,115 +1,394 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pulse — Tu media buyer de IA para Meta Ads</title>
-    <meta name="description" content="Pulse conecta tu cuenta de Meta Ads, la analiza con IA (Claude Opus 4.7) y optimiza tus campañas — con tu aprobación o en autopilot. Para freelancers y agencias." />
-    <meta name="theme-color" content="#0d0b1a" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta property="og:title" content="Pulse — Tu media buyer de IA para Meta Ads" />
-    <meta property="og:description" content="Analiza, optimiza y ejecuta pauta en Meta Ads con un agente de IA. Modos lectura, asistido y autopilot con guardrails." />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://pulseads.app" />
-    <link rel="stylesheet" href="/src/styles.css" />
-  </head>
-  <body>
-    <header class="nav">
-      <a class="brand" href="/"><span class="logo-dot"></span> PULSE</a>
-      <nav class="nav-links">
-        <a href="#precios">Precios</a>
-        <a class="btn btn-ghost" data-app-link href="#">Entrar</a>
-        <a class="btn btn-primary" data-app-link href="#">Empezar gratis</a>
-      </nav>
-    </header>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pulse — El agente de IA que aprende, optimiza y escala tus campañas</title>
+<meta name="description" content="Pulse administra tus campañas de Meta Ads, visualiza resultados, aprende del comportamiento de tus anuncios y automatiza decisiones para más leads y mejor ROAS." />
+<meta name="theme-color" content="#04030b" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<meta property="og:title" content="Pulse — Tu agente de IA para Meta Ads" />
+<meta property="og:description" content="Administra, aprende y optimiza tus campañas de Meta Ads con un agente de IA. Más leads, mejor ROAS." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://pulseads.app" />
+<link rel="stylesheet" href="/src/styles.css">
+</head>
+<body>
 
-    <main>
-      <section class="hero">
-        <div class="hero-glow"></div>
-        <p class="eyebrow">Para freelancers y agencias de Meta Ads</p>
-        <h1>Tu media buyer de IA<br /><span class="grad">que no duerme</span></h1>
-        <p class="lede">
-          Pulse conecta tu cuenta de Meta, la analiza con Claude Opus 4.7 y optimiza tus campañas
-          — con tu aprobación o en autopilot. Siempre con guardrails de seguridad.
-        </p>
-        <div class="hero-cta">
-          <a class="btn btn-primary btn-lg" data-app-link href="#">Conecta tu cuenta gratis</a>
-          <a class="btn btn-ghost btn-lg" href="#precios">Ver precios</a>
-        </div>
-        <p class="hero-note">14 días gratis · sin tarjeta · cancela cuando quieras</p>
-      </section>
+<!-- ============ SVG SPRITE ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="pg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#c79bff"/><stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 12 7 12 10 19 14 5 17 12 21 12"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M4.9 4.9 7 7M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/></symbol>
+  <symbol id="i-network" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="5" rx="1"/><rect x="2.5" y="16" width="6" height="5" rx="1"/><rect x="15.5" y="16" width="6" height="5" rx="1"/><path d="M12 8v3M5.5 16v-2a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v2"/></symbol>
+  <symbol id="i-brain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 4A2.5 2.5 0 0 0 7 6.5 2.5 2.5 0 0 0 5.5 11 2.5 2.5 0 0 0 6 15.5 2.5 2.5 0 0 0 9.5 18 2 2 0 0 0 11.5 16V6A2 2 0 0 0 9.5 4Z"/><path d="M14.5 4A2.5 2.5 0 0 1 17 6.5 2.5 2.5 0 0 1 18.5 11 2.5 2.5 0 0 1 18 15.5 2.5 2.5 0 0 1 14.5 18 2 2 0 0 1 12.5 16V6A2 2 0 0 1 14.5 4Z"/><path d="M11.5 9.5h1M8 7.5h1M16 10.5h-1.5M9 13h1.5M14 13.5h1.5"/></symbol>
+  <symbol id="i-bars" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="20" y2="21"/><rect x="5" y="13" width="3" height="6" rx=".6"/><rect x="10.5" y="9" width="3" height="10" rx=".6"/><rect x="16" y="6" width="3" height="13" rx=".6"/><polyline points="4 11 9 8 14 9 20 3" stroke-dasharray="2 2"/></symbol>
+  <symbol id="i-megaphone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4a1 1 0 0 0 1 1h2l5 4V5L7 9H5a1 1 0 0 0-1 1z"/><path d="M16 8.5a4 4 0 0 1 0 7M18.5 6a7 7 0 0 1 0 12"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+  <symbol id="i-checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 12.5 10 17.5 19 6.5"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 14.5 14.5 9.5"/><path d="M11 7 12.5 5.5a3.5 3.5 0 0 1 5 5L15 13"/><path d="M13 17 11.5 18.5a3.5 3.5 0 0 1-5-5L9 11"/></symbol>
+  <symbol id="i-rocket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15c-1.5 1.3-2 5.5-2 5.5s4.2-.5 5.5-2"/><path d="M9 14a13 13 0 0 1 9-11c2 0 3 1 3 3a13 13 0 0 1-11 9z"/><path d="M9 14l-3 1 .5-3M10 15l1 3 3-1"/><circle cx="15" cy="9" r="1.4"/></symbol>
+  <symbol id="i-shuffle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3.5 20.5 7 17 10.5"/><path d="M3.5 8.5H7a4 4 0 0 1 3.3 1.8"/><path d="M20.5 7H16a5 5 0 0 0-4.2 2.3l-3.6 5.4A5 5 0 0 1 4 17H3.5"/><path d="M17 13.5 20.5 17 17 20.5"/><path d="M20.5 17H16a5 5 0 0 1-3-1"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="5" width="3.5" height="14" rx="1"/><rect x="13.5" y="5" width="3.5" height="14" rx="1"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 10.5 13.5"/><path d="M21 3 14.5 21l-4-7.5L3 9.5z"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4.2"/><circle cx="12" cy="12" r="1" fill="currentColor"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 14.5 9l6 .6-4.5 4 1.3 5.9L12 16.6 6.7 19.5 8 13.6l-4.5-4 6-.6z"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19a9 9 0 1 1 14 0"/><path d="m12 14 4-4"/><circle cx="12" cy="14" r="1.2" fill="currentColor"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5l12 7-12 7z"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 40 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="34" y2="12"/><polyline points="27 5 35 12 27 19"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></symbol>
+  <symbol id="i-ig" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="#fff" stroke="none"/></symbol>
+  <symbol id="i-fb" viewBox="0 0 24 24"><path fill="#fff" d="M13.6 21v-7.1h2.4l.4-2.8h-2.8V9.3c0-.8.2-1.4 1.4-1.4h1.5V5.4C16.2 5.3 15.3 5.2 14.4 5.2c-2.2 0-3.7 1.3-3.7 3.8v2.1H8.2v2.8h2.5V21z"/></symbol>
+  <symbol id="i-msgr" viewBox="0 0 24 24"><path fill="#fff" d="M12 3.5c-4.7 0-8.3 3.4-8.3 8 0 2.5 1.1 4.6 2.9 6v3.1l2.9-1.6c.8.2 1.6.3 2.5.3 4.7 0 8.3-3.4 8.3-8s-3.6-7.8-8.3-7.8zm.8 10.3-2.1-2.3-4.1 2.3 4.5-4.8 2.2 2.3 4-2.3z"/></symbol>
+  <symbol id="i-yt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="6" width="18" height="12" rx="4"/><path d="M10.5 9.3 15 12l-4.5 2.7z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-li" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><line x1="7" y1="10.5" x2="7" y2="17"/><circle cx="7" cy="7" r="1"/><path d="M11 17v-3.4a2.4 2.4 0 0 1 4.8 0V17"/></symbol>
+  <symbol id="i-ig-line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r="1.1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-fb-line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M13.6 19v-5.1h1.9l.3-2.3h-2.2v-1.3c0-.7.2-1.1 1.1-1.1h1.2V7.1c-.4 0-1-.1-1.7-.1-1.6 0-2.6.9-2.6 2.6v1.9H9.5v2.3h1.9V19"/></symbol>
+</svg>
 
-      <section class="band">
-        <div class="cards-3">
-          <div class="card">
-            <h3>🧠 Analiza con IA</h3>
-            <p>Audita estructura, tracking, creatividad y presupuesto. Detecta anomalías con estadística real, no umbrales fijos.</p>
-          </div>
-          <div class="card">
-            <h3>⚡ Optimiza en autopilot</h3>
-            <p>Escala ganadoras, frena fugas y rota creatividades dentro de tus límites. Lectura, asistido o autopilot — tú mandas.</p>
-          </div>
-          <div class="card">
-            <h3>📊 Reporta en un click</h3>
-            <p>Exporta PDF, CSV y XLSX con tu marca. Notificaciones push y email cuando algo importa.</p>
-          </div>
-        </div>
-      </section>
+<!-- ============ NAV ============ -->
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="logo" href="/">
+      <svg viewBox="0 0 48 48" class="mark"><path fill="url(#pg)" d="M15 6h12.5a10.5 10.5 0 0 1 0 21H21v15h-6z"/><path fill="#08060f" d="M21 12h6a4.5 4.5 0 0 1 0 9h-6z"/><path fill="#fff" opacity=".92" d="M19 4 11 19h5l-2.5 11 9.5-16h-5.2z"/></svg>
+      <span><span class="name">Pulse</span><div class="sub">AI ADS AGENT</div></span>
+    </a>
+    <nav class="nav-links">
+      <a href="#inicio" class="active">Inicio</a>
+      <a href="#como">Cómo funciona</a>
+      <a href="#roas">ROAS</a>
+      <a href="#precios">Precios</a>
+      <a href="#contacto">Contacto</a>
+      <a class="btn btn-primary nav-cta-mobile" data-app-link href="#">Empezar gratis</a>
+    </nav>
+    <div class="nav-right">
+      <a class="btn btn-ghost nav-login" data-app-link href="#">Entrar</a>
+      <a class="btn btn-primary" data-app-link href="#">Empezar gratis <svg viewBox="0 0 40 24" style="width:16px;height:11px"><use href="#i-arrow"/></svg></a>
+    </div>
+    <button class="nav-toggle" aria-label="Abrir menú" aria-expanded="false"><svg viewBox="0 0 24 24"><use href="#i-menu"/></svg></button>
+  </div>
+</header>
 
-      <section class="band alt" id="precios">
-        <h2>Precios simples</h2>
-        <p class="band-sub">14 días gratis en todos los planes.</p>
-        <div class="pricing">
-          <div class="price-card">
-            <h3>Solo</h3>
-            <p class="price">$49<span>/mes</span></p>
-            <p class="price-for">Freelancers · 1 cuenta</p>
-            <a class="btn btn-ghost" data-app-link href="#">Empezar</a>
-          </div>
-          <div class="price-card featured">
-            <span class="badge">Más popular</span>
-            <h3>Agency</h3>
-            <p class="price">$199<span>/mes</span></p>
-            <p class="price-for">Agencias · hasta 10 cuentas + autopilot</p>
-            <a class="btn btn-primary" data-app-link href="#">Empezar</a>
-          </div>
-          <div class="price-card">
-            <h3>Scale</h3>
-            <p class="price">$499<span>/mes</span></p>
-            <p class="price-for">Cuentas y usuarios ilimitados</p>
-            <a class="btn btn-ghost" data-app-link href="#">Empezar</a>
-          </div>
-        </div>
-      </section>
+<!-- ============ HERO ============ -->
+<section class="hero" id="inicio">
+  <div class="wrap hero-grid">
+    <div class="hero-left">
+      <h1>El agente de IA que aprende, <span class="violet">optimiza</span> y <span class="violet">escala</span> tus campañas.</h1>
+      <p class="lead">Pulse administra campañas, visualiza resultados, aprende del comportamiento de tus anuncios y automatiza decisiones para ayudarte a conseguir más leads y mejor ROAS.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" data-app-link href="#">Probar Pulse <svg viewBox="0 0 40 24" style="width:16px;height:11px"><use href="#i-arrow"/></svg></a>
+        <a class="btn btn-ghost" href="#como">Ver cómo funciona <span class="play"><svg viewBox="0 0 24 24"><use href="#i-play"/></svg></span></a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat"><div class="v">3.8x</div><div class="l">ROAS</div></div>
+        <div class="stat"><div class="v">12,540</div><div class="l">Leads</div></div>
+        <div class="stat"><div class="v">2.45%</div><div class="l">CTR</div></div>
+        <div class="stat"><div class="v">$1.42</div><div class="l">CPA</div></div>
+        <div class="stat live"><div class="v"><span class="dot"></span>Activo</div><div class="l">Aprendizaje</div></div>
+      </div>
+    </div>
 
-      <section class="final-cta">
-        <h2>Deja de revisar dashboards. Empieza a optimizar.</h2>
-        <a class="btn btn-primary btn-lg" data-app-link href="#">Conecta tu cuenta gratis</a>
-      </section>
-    </main>
+    <!-- dashboard mockup -->
+    <div class="dash-wrap">
+      <div class="socials">
+        <div class="sicon ig"><svg viewBox="0 0 24 24"><use href="#i-ig"/></svg></div>
+        <div class="sicon fb mid"><svg viewBox="0 0 24 24"><use href="#i-fb"/></svg></div>
+        <div class="sicon msgr"><svg viewBox="0 0 24 24"><use href="#i-msgr"/></svg></div>
+      </div>
 
-    <footer class="footer">
-      <div class="footer-cols">
-        <div>
-          <a class="brand" href="/"><span class="logo-dot"></span> PULSE</a>
-          <p>Tu media buyer de IA para Meta Ads.</p>
-        </div>
-        <div>
-          <h4>Producto</h4>
-          <a href="#precios">Precios</a>
-          <a data-app-link href="#">Entrar</a>
-        </div>
-        <div>
-          <h4>Legal</h4>
-          <a href="/legal/privacy.html">Privacidad</a>
-          <a href="/legal/terms.html">Términos</a>
-          <a href="/legal/dpa.html">DPA</a>
-          <a href="/legal/cookies.html">Cookies</a>
+      <div class="dashboard">
+        <aside class="dash-side">
+          <svg viewBox="0 0 48 48" class="slogo"><path fill="url(#pg)" d="M15 6h12.5a10.5 10.5 0 0 1 0 21H21v15h-6z"/><path fill="#08060f" d="M21 12h6a4.5 4.5 0 0 1 0 9h-6z"/><path fill="#fff" opacity=".9" d="M19 4 11 19h5l-2.5 11 9.5-16h-5.2z"/></svg>
+          <div class="nav-ic active"><svg viewBox="0 0 24 24"><use href="#i-home"/></svg></div>
+          <div class="nav-ic"><svg viewBox="0 0 24 24"><use href="#i-grid"/></svg></div>
+          <div class="nav-ic"><svg viewBox="0 0 24 24"><use href="#i-activity"/></svg></div>
+          <div class="nav-ic"><svg viewBox="0 0 24 24"><use href="#i-settings"/></svg></div>
+        </aside>
+        <div class="dash-main">
+          <div class="dash-head">
+            <h3>Resumen general</h3>
+            <span class="pill">Últimos 7 días <svg viewBox="0 0 24 24"><use href="#i-chevron"/></svg></span>
+          </div>
+          <div class="kpis">
+            <div class="kpi"><div class="lbl">ROAS</div><div class="num">3.82x</div><div class="chg up">▲ 28% vs prev.</div></div>
+            <div class="kpi"><div class="lbl">Inversión</div><div class="num">$24,680</div><div class="chg up">▲ 18%</div></div>
+            <div class="kpi"><div class="lbl">Leads</div><div class="num">12,540</div><div class="chg up">▲ 32%</div></div>
+            <div class="kpi"><div class="lbl">CPA</div><div class="num">$1.42</div><div class="chg down">▼ 15%</div></div>
+          </div>
+          <div class="dash-lower">
+            <div class="chart-card">
+              <div class="yax"><span>5x</span><span>4x</span><span>3x</span><span>2x</span><span>1x</span></div>
+              <div class="tooltip" style="top:34px;right:30px;">3.82x</div>
+              <svg class="chart-svg" viewBox="0 0 360 130" width="100%" height="130" preserveAspectRatio="none">
+                <defs><linearGradient id="hc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a855f7" stop-opacity=".35"/><stop offset="1" stop-color="#a855f7" stop-opacity="0"/></linearGradient></defs>
+                <polyline fill="url(#hc)" stroke="none" points="6,110 6,108 36,103 66,98 96,82 126,90 156,68 186,60 216,75 246,55 276,60 306,42 336,46 354,34 354,128 6,128"/>
+                <polyline fill="none" stroke="#c084fc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" points="6,108 36,103 66,98 96,82 126,90 156,68 186,60 216,75 246,55 276,60 306,42 336,46 354,34"/>
+                <circle cx="306" cy="42" r="4.5" fill="#fff" stroke="#a855f7" stroke-width="2.5"/>
+              </svg>
+              <div class="xax"><span>12 May</span><span>13 May</span><span>14 May</span><span>15 May</span><span>16 May</span><span>17 May</span><span>18 May</span></div>
+            </div>
+            <div class="top-camp">
+              <h4>Mejores campañas</h4>
+              <div class="camp-row"><span class="cdot" style="background:#c084fc"></span><span class="cname">Campaña Leads Pro</span><span class="cval">3.92x</span></div>
+              <div class="camp-row"><span class="cdot" style="background:#a855f7"></span><span class="cname">Ventas IG</span><span class="cval">3.45x</span></div>
+              <div class="camp-row"><span class="cdot" style="background:#8b5cf6"></span><span class="cname">Mensajes FB</span><span class="cval">3.21x</span></div>
+              <div class="camp-row"><span class="cdot" style="background:#7c3aed"></span><span class="cname">Remarketing 1</span><span class="cval">2.89x</span></div>
+              <div class="vertodas">Ver todas</div>
+            </div>
+          </div>
         </div>
       </div>
-      <p class="copyright">© <span id="year"></span> Pulse. Pulse no está afiliado a Meta Platforms, Inc. Facebook e Instagram son marcas de Meta.</p>
-    </footer>
 
-    <script type="module" src="/src/main.ts"></script>
-  </body>
+      <!-- flow row -->
+      <div class="flow">
+        <div class="flow-card">
+          <div class="ft">Anuncios</div>
+          <div class="fa">● 34 activos</div>
+          <div class="thumbs">
+            <div class="thumb" style="background:linear-gradient(135deg,#3b4a6b,#1f2740)"></div>
+            <div class="thumb" style="background:linear-gradient(135deg,#5b3b6b,#2a1f40)"></div>
+          </div>
+        </div>
+        <div class="flow-arrow"><svg viewBox="0 0 40 24"><use href="#i-arrow"/></svg></div>
+        <div class="flow-card flow-mid">
+          <div class="pm"><svg viewBox="0 0 48 48"><path fill="url(#pg)" d="M15 6h12.5a10.5 10.5 0 0 1 0 21H21v15h-6z"/><path fill="#0a0814" d="M21 12h6a4.5 4.5 0 0 1 0 9h-6z"/><path fill="#fff" opacity=".9" d="M19 4 11 19h5l-2.5 11 9.5-16h-5.2z"/></svg></div>
+          <div><b>IA Pulse</b><span>Analizando rendimiento</span></div>
+        </div>
+        <div class="flow-arrow"><svg viewBox="0 0 40 24"><use href="#i-arrow"/></svg></div>
+        <div class="flow-card">
+          <div class="ft">Leads generados</div>
+          <div class="leads-num">12,540 <span class="green">▲ 32%</span></div>
+          <div class="avatars">
+            <div class="av" style="background:linear-gradient(135deg,#f0a37e,#c2607a)"></div>
+            <div class="av" style="background:linear-gradient(135deg,#7e9af0,#5060c2)"></div>
+            <div class="av" style="background:linear-gradient(135deg,#a37ef0,#7c3aed)"></div>
+            <div class="av" style="background:linear-gradient(135deg,#f07ed0,#c25090)"></div>
+            <div class="av" style="background:linear-gradient(135deg,#7ef0c0,#50c290)"></div>
+            <span class="more">+126</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ESTRUCTURA INTELIGENTE ============ -->
+<section class="sec wrap">
+  <div class="sec-head">
+    <h2>Estructura <span class="violet">inteligente</span><br>para pauta de alto rendimiento.</h2>
+    <p>Pulse organiza campañas, conjuntos y anuncios con lógica, datos y aprendizaje continuo para tomar mejores decisiones, más rápido.</p>
+  </div>
+  <div class="features">
+    <div class="feat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-network"/></svg></div><h3>Arquitectura de campañas</h3><p>Estructuras probadas que se adaptan a tus objetivos y segmentos clave.</p></div>
+    <div class="feat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-brain"/></svg></div><h3>Aprendizaje continuo</h3><p>La IA aprende del rendimiento y el comportamiento de tus anuncios en tiempo real.</p></div>
+    <div class="feat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-bars"/></svg></div><h3>Decisiones guiadas por datos</h3><p>Cada acción se basa en evidencia, no en suposiciones. Más precisión, menos gasto.</p></div>
+    <div class="feat"><div class="ic"><svg viewBox="0 0 24 24"><use href="#i-megaphone"/></svg></div><h3>Optimización multicanal</h3><p>Integra Instagram, Facebook y Messenger para una estrategia coordinada y efectiva.</p></div>
+  </div>
+</section>
+
+<!-- ============ AUTOMATIZACIÓN ============ -->
+<section class="sec wrap">
+  <div class="sec-split">
+    <div class="sec-head">
+      <h2>Automatización +<br><span class="violet">autoaprendizaje.</span></h2>
+      <p>Pulse observa resultados, detecta patrones, compara rendimiento y ajusta campañas progresivamente para mejorar tus métricas clave y escalar lo que funciona.</p>
+      <div class="checks">
+        <div class="check"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg>Detección de patrones</div>
+        <div class="check"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg>Ajustes automáticos</div>
+        <div class="check"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg>Comparación continua</div>
+        <div class="check"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg>Mejora progresiva</div>
+      </div>
+    </div>
+
+    <div class="auto-diagram">
+      <div class="live-card">
+        <h4>Datos en vivo</h4>
+        <div class="live-row"><span class="lr-l"><span class="ldot"></span>Impresiones</span><span class="lr-v">1.2M</span></div>
+        <div class="live-row"><span class="lr-l"><span class="ldot"></span>Clics</span><span class="lr-v">29.4K</span></div>
+        <div class="live-row"><span class="lr-l"><span class="ldot"></span>Leads</span><span class="lr-v">12.5K</span></div>
+        <div class="live-row"><span class="lr-l"><span class="ldot"></span>Ventas</span><span class="lr-v">5.3K</span></div>
+        <div class="live-row"><span class="lr-l"><span class="ldot"></span>Gasto</span><span class="lr-v">$24.6K</span></div>
+        <svg class="mini-spark" viewBox="0 0 180 34" width="100%" height="34" preserveAspectRatio="none"><polyline fill="none" stroke="#a855f7" stroke-width="1.8" points="2,28 18,22 34,25 50,16 66,20 82,11 98,15 114,8 130,13 146,6 162,10 178,4"/></svg>
+      </div>
+
+      <div class="brain-center">
+        <span class="orbit-tag t-obs">Observa</span>
+        <span class="orbit-tag t-apr">Aprende</span>
+        <span class="orbit-tag t-aju">Ajusta</span>
+        <div class="brain-orbit"><svg viewBox="0 0 24 24"><use href="#i-brain"/></svg></div>
+        <div class="brain-label"><b>IA Pulse</b><span>Analiza · Aprende · Decide</span></div>
+      </div>
+
+      <div class="actions-card">
+        <h4>Acciones automáticas</h4>
+        <div class="action-row"><span class="aic"><svg viewBox="0 0 24 24"><use href="#i-shuffle"/></svg></span>Redistribuir presupuesto</div>
+        <div class="action-row"><span class="aic"><svg viewBox="0 0 24 24"><use href="#i-pause"/></svg></span>Pausar anuncios</div>
+        <div class="action-row"><span class="aic"><svg viewBox="0 0 24 24"><use href="#i-send"/></svg></span>Escalar ganadores</div>
+        <div class="action-row"><span class="aic"><svg viewBox="0 0 24 24"><use href="#i-target"/></svg></span>Probar nuevas audiencias</div>
+        <div class="foot">Ejecución continua</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CÓMO FUNCIONA ============ -->
+<section class="sec wrap" id="como">
+  <h2 class="center-head">Cómo funciona</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-top"><div class="step-num">1</div><h3>Conectas tus cuentas</h3></div>
+      <p>Integra tus activos, campañas y fuentes de leads en minutos.</p>
+      <div class="step-ic"><svg viewBox="0 0 24 24"><use href="#i-link"/></svg></div>
+    </div>
+    <div class="step-arrow"><svg viewBox="0 0 40 24"><use href="#i-arrow"/></svg></div>
+    <div class="step">
+      <div class="step-top"><div class="step-num">2</div><h3>Dejas que Pulse visualice y aprenda</h3></div>
+      <p>El sistema analiza resultados, comportamiento y estructura para construir criterio operativo.</p>
+      <div class="step-ic"><svg viewBox="0 0 24 24"><use href="#i-brain"/></svg></div>
+    </div>
+    <div class="step-arrow"><svg viewBox="0 0 40 24"><use href="#i-arrow"/></svg></div>
+    <div class="step">
+      <div class="step-top"><div class="step-num">3</div><h3>Activas el automático</h3></div>
+      <p>Pulse empieza a optimizar con foco en rendimiento, eficiencia y objetivos.</p>
+      <div class="step-ic"><svg viewBox="0 0 24 24"><use href="#i-rocket"/></svg></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ROAS ============ -->
+<section class="sec wrap" id="roas">
+  <div class="roas-grid">
+    <div class="sec-head">
+      <h2>Enfocado en <span class="violet">ROAS</span><br>y objetivos reales.</h2>
+      <p>Pulse no es solo automatización: es un agente de IA creado para maximizar tu ROAS, mejorar resultados de conversión y perseguir tus objetivos con inteligencia.</p>
+    </div>
+
+    <div class="roas-mid">
+      <div class="mini-kpis">
+        <div class="mini-kpi"><div class="lbl">ROAS</div><div class="num">3.82x</div><div class="chg">▲ 28%</div></div>
+        <div class="mini-kpi"><div class="lbl">Leads</div><div class="num">12,540</div><div class="chg">▲ 32%</div></div>
+        <div class="mini-kpi"><div class="lbl">CPA</div><div class="num">$1.42</div><div class="chg">▼ 15%</div></div>
+      </div>
+      <div class="roas-chart">
+        <div class="rc-head"><b>ROAS a lo largo del tiempo</b><span class="tooltip" style="position:static">3.82x</span></div>
+        <div style="display:flex;gap:8px">
+          <div class="yax" style="position:static;gap:11px"><span>5x</span><span>4x</span><span>3x</span><span>2x</span><span>1x</span></div>
+          <div style="flex:1">
+            <svg viewBox="0 0 360 130" width="100%" height="130" preserveAspectRatio="none">
+              <defs><linearGradient id="rc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a855f7" stop-opacity=".3"/><stop offset="1" stop-color="#a855f7" stop-opacity="0"/></linearGradient></defs>
+              <polyline fill="url(#rc)" stroke="none" points="6,108 36,100 66,104 96,86 126,92 156,72 186,80 216,60 246,66 276,48 306,54 336,40 354,30 354,128 6,128"/>
+              <polyline fill="none" stroke="#c084fc" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" points="6,108 36,100 66,104 96,86 126,92 156,72 186,80 216,60 246,66 276,48 306,54 336,40 354,30"/>
+              <circle cx="336" cy="40" r="4.5" fill="#fff" stroke="#a855f7" stroke-width="2.5"/>
+            </svg>
+            <div class="xax" style="padding-left:0"><span>12 May</span><span>14 May</span><span>16 May</span><span>18 May</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="roas-list">
+      <div class="roas-item"><span class="ric"><svg viewBox="0 0 24 24"><use href="#i-star"/></svg></span><div><h4>Más control</h4><p>Visualiza cada variable, toma decisiones informadas y mantén el control.</p></div></div>
+      <div class="roas-item"><span class="ric"><svg viewBox="0 0 24 24"><use href="#i-gauge"/></svg></span><div><h4>Mejor rendimiento</h4><p>Optimización inteligente que reduce costos y aumenta tus resultados.</p></div></div>
+      <div class="roas-item"><span class="ric"><svg viewBox="0 0 24 24"><use href="#i-target"/></svg></span><div><h4>Objetivos claros</h4><p>Ventas, leads o mensajes: Pulse trabaja por lo que realmente importa.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PRECIOS ============ -->
+<section class="sec wrap" id="precios">
+  <h2 class="center-head">Precios</h2>
+  <div class="pricing">
+    <div class="plan">
+      <h3>Solo</h3>
+      <div class="price">$49<span>/mes</span></div>
+      <ul>
+        <li><svg viewBox="0 0 24 24"><use href="#i-checkmark"/></svg>1 cuenta publicitaria</li>
+        <li><svg viewBox="0 0 24 24"><use href="#i-checkmark"/></svg>Análisis y recomendaciones IA</li>
+        <li><svg viewBox="0 0 24 24"><use href="#i-checkmark"/></svg>Modos lectura y asistido</li>
+        <li><svg viewBox="0 0 24 24"><use href="#i-checkmark"/></svg>Reportes con tu marca</li>
+      </ul>
+      <a class="btn pick ghost" data-app-link href="#">Elegir plan</a>
+    </div>
+    <div class="plan pop">
+      <div class="pop-badge">Más popular</div>
+      <h3>Agency</h3>
+      <div class="price">$199<span>/mes</span></div>
+      <ul>
+        <li><svg viewBox="0 0 24 24"><use href="#i-checkmark"/></svg>Hasta 10 cuentas · 5 usuarios</li>
+        <li><svg viewBox="0 0 24 24"><use href="#i-checkmark"/></svg>Autopilot con guardrails</li>
+        <li><svg viewBox="0 0 24 24"><use href="#i-checkmark"/></svg>Aprendizaje continuo</li>
+        <li><svg viewBox="0 0 24 24"><use href="#i-checkmark"/></svg>Soporte prioritario</li>
+      </ul>
+      <a class="btn btn-primary pick" data-app-link href="#">Elegir plan</a>
+    </div>
+    <div class="plan">
+      <h3>Scale</h3>
+      <div class="price">$499<span>/mes</span></div>
+      <ul>
+        <li><svg viewBox="0 0 24 24"><use href="#i-checkmark"/></svg>Cuentas y usuarios ilimitados</li>
+        <li><svg viewBox="0 0 24 24"><use href="#i-checkmark"/></svg>Autopilot completo</li>
+        <li><svg viewBox="0 0 24 24"><use href="#i-checkmark"/></svg>Insights avanzados + API</li>
+        <li><svg viewBox="0 0 24 24"><use href="#i-checkmark"/></svg>Soporte premium</li>
+      </ul>
+      <a class="btn pick ghost" data-app-link href="#">Elegir plan</a>
+    </div>
+  </div>
+  <p class="price-note">Todos los planes en USD · el pago se realiza dentro de la app</p>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer id="contacto">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-about">
+        <a class="logo" href="/">
+          <svg viewBox="0 0 48 48" class="mark"><path fill="url(#pg)" d="M15 6h12.5a10.5 10.5 0 0 1 0 21H21v15h-6z"/><path fill="#08060f" d="M21 12h6a4.5 4.5 0 0 1 0 9h-6z"/><path fill="#fff" opacity=".92" d="M19 4 11 19h5l-2.5 11 9.5-16h-5.2z"/></svg>
+          <span><span class="name">Pulse</span><div class="sub">AI ADS AGENT</div></span>
+        </a>
+        <p>El agente de IA que administra, aprende y optimiza tus campañas para que consigas más leads, ventas y mejor ROAS.</p>
+        <span class="url">pulseads.app</span>
+      </div>
+      <div class="foot-col">
+        <h5>Producto</h5>
+        <a href="#como">Cómo funciona</a>
+        <a href="#roas">ROAS</a>
+        <a href="#precios">Precios</a>
+        <a data-app-link href="#">Entrar</a>
+      </div>
+      <div class="foot-col">
+        <h5>Recursos</h5>
+        <a data-app-link href="#">Empezar gratis</a>
+        <a href="#contacto">Contacto</a>
+      </div>
+      <div class="foot-col">
+        <h5>Legal</h5>
+        <a href="/legal/privacy.html">Privacidad</a>
+        <a href="/legal/terms.html">Términos</a>
+        <a href="/legal/dpa.html">DPA</a>
+        <a href="/legal/cookies.html">Cookies</a>
+      </div>
+      <div class="foot-col">
+        <h5>Conecta</h5>
+        <a class="soc" href="#"><svg viewBox="0 0 24 24"><use href="#i-ig-line"/></svg>Instagram</a>
+        <a class="soc" href="#"><svg viewBox="0 0 24 24"><use href="#i-fb-line"/></svg>Facebook</a>
+        <a class="soc" href="#"><svg viewBox="0 0 24 24"><use href="#i-li"/></svg>LinkedIn</a>
+        <a class="soc" href="#"><svg viewBox="0 0 24 24"><use href="#i-yt"/></svg>YouTube</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span class="c">© <span id="year"></span> Pulse — AI Ads Agent. Pulse no está afiliado a Meta Platforms, Inc. Facebook e Instagram son marcas de Meta.</span>
+      <span class="u">pulseads.app</span>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="/src/main.ts"></script>
+</body>
 </html>

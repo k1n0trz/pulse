@@ -116,75 +116,104 @@ export async function executiveToXlsx(report: ExecutiveReport): Promise<Exported
 
 export function executiveToPdf(report: ExecutiveReport): Promise<ExportedFile> {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: "A4", margin: 48 });
+    const doc = new PDFDocument({ size: "A4", margin: 0, bufferPages: true });
     const chunks: Buffer[] = [];
     doc.on("data", (c: Buffer) => chunks.push(c));
     doc.on("end", () =>
-      resolve({
-        buffer: Buffer.concat(chunks),
-        contentType: "application/pdf",
-        filename: `pulse-executive-${dateStamp()}.pdf`
-      })
+      resolve({ buffer: Buffer.concat(chunks), contentType: "application/pdf", filename: `pulse-executive-${dateStamp()}.pdf` })
     );
     doc.on("error", reject);
 
-    const purple = "#6d28d9";
+    // Pulse brand palette
+    const PURPLE = "#6d28d9";
+    const PURPLE2 = "#a855f7";
+    const INK = "#1b1530";
+    const MUTED = "#6b6680";
+    const LINE = "#e8e1f7";
+    const CARD = "#f6f2fe";
 
-    // Header
-    doc.fillColor(purple).fontSize(24).text("PULSE", { continued: true }).fillColor("#666").fontSize(12).text("  ·  Reporte ejecutivo");
-    doc.moveDown(0.3);
-    doc.fillColor("#111").fontSize(14).text(report.organizationName);
-    doc.fillColor("#888").fontSize(9).text(`Generado: ${new Date(report.generatedAt).toLocaleString("es-MX")} · ${report.windowLabel}`);
-    doc.moveDown(1);
+    const W = doc.page.width;
+    const H = doc.page.height;
+    const M = 48;
+    const innerW = W - 2 * M;
 
-    // KPIs
-    doc.fillColor("#111").fontSize(13).text("Resumen", { underline: false });
-    doc.moveDown(0.4);
+    // ---------- Header band ----------
+    doc.rect(0, 0, W, 104).fill(PURPLE);
+    doc.rect(0, 100, W, 4).fill(PURPLE2);
+    // Wordmark with a small lightning/pulse glyph
+    doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(13).text("⚡", M, 34, { continued: true }).fontSize(24).text(" PULSE");
+    doc.font("Helvetica").fontSize(10.5).fillColor("#e9defb").text("Reporte ejecutivo · Ads Intelligence Agent", M, 66);
+    // Right-aligned meta
+    doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(11).text(report.organizationName, W - M - 240, 32, { width: 240, align: "right" });
+    doc.font("Helvetica").fontSize(8.5).fillColor("#e9defb")
+      .text(`Generado: ${new Date(report.generatedAt).toLocaleString("es-MX")}`, W - M - 240, 50, { width: 240, align: "right" })
+      .text(`Periodo: ${report.windowLabel}`, W - M - 240, 64, { width: 240, align: "right" });
+
+    // ---------- KPI cards ----------
     const kpis: Array<[string, string]> = [
       ["Inversión total", money(report.totals.spend)],
-      ["Resultados", String(report.totals.results)],
+      ["Resultados", report.totals.results.toLocaleString("en-US")],
       ["Campañas (activas)", `${report.totals.campaigns} (${report.totals.activeCampaigns})`],
       ["CPA promedio", report.totals.avgCpa !== null ? money(report.totals.avgCpa) : "—"],
       ["ROAS ponderado", report.totals.weightedRoas !== null ? `${report.totals.weightedRoas}x` : "—"],
       ["CTR promedio", report.totals.avgCtr !== null ? `${report.totals.avgCtr}%` : "—"]
     ];
-    doc.fontSize(10).fillColor("#333");
-    for (const [label, value] of kpis) {
-      doc.text(`${label}: `, { continued: true }).fillColor("#111").text(value).fillColor("#333");
-    }
-    doc.moveDown(1);
+    const cols = 3;
+    const gap = 12;
+    const cardW = (innerW - gap * (cols - 1)) / cols;
+    const cardH = 58;
+    const kpiTop = 132;
+    kpis.forEach(([label, value], i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = M + col * (cardW + gap);
+      const cy = kpiTop + row * (cardH + gap);
+      doc.roundedRect(x, cy, cardW, cardH, 9).fill(CARD);
+      doc.roundedRect(x, cy, 4, cardH, 2).fill(PURPLE2);
+      doc.fillColor(MUTED).font("Helvetica").fontSize(8).text(label.toUpperCase(), x + 14, cy + 12, { width: cardW - 22, characterSpacing: 0.3 });
+      doc.fillColor(INK).font("Helvetica-Bold").fontSize(17).text(value, x + 14, cy + 26, { width: cardW - 22 });
+    });
 
-    // Open recommendations
+    let y = kpiTop + 2 * (cardH + gap) + 8;
+
+    const heading = (text: string) => {
+      doc.fillColor(PURPLE).font("Helvetica-Bold").fontSize(13).text(text, M, y);
+      y = doc.y + 4;
+      doc.moveTo(M, y).lineTo(W - M, y).strokeColor(LINE).lineWidth(1).stroke();
+      y += 10;
+    };
+    const line = (cb: () => void) => { cb(); y = doc.y + 4; };
+
+    // ---------- Recommendations ----------
     if (report.openRecommendations.length > 0) {
-      doc.fillColor("#111").fontSize(13).text("Recomendaciones abiertas");
-      doc.moveDown(0.4);
-      doc.fontSize(9);
-      for (const r of report.openRecommendations.slice(0, 12)) {
-        doc.fillColor(severityColor(r.severity)).text(`● `, { continued: true })
-          .fillColor("#111").text(`${r.title} `, { continued: true })
-          .fillColor("#777").text(`— ${r.expectedImpact}`);
+      heading("Recomendaciones abiertas");
+      for (const r of report.openRecommendations.slice(0, 8)) {
+        doc.fillColor(severityColor(r.severity)).font("Helvetica-Bold").fontSize(9).text("●  ", M, y, { continued: true })
+          .fillColor(INK).text(`${r.title}  `, { continued: true })
+          .fillColor(MUTED).font("Helvetica").text(`— ${r.expectedImpact}`, { width: innerW });
+        y = doc.y + 5;
       }
-      doc.moveDown(1);
+      y += 6;
     }
 
-    // Top by ROAS
-    doc.fillColor("#111").fontSize(13).text("Top 5 por ROAS");
-    doc.moveDown(0.3);
-    doc.fontSize(9).fillColor("#333");
+    // ---------- Top by ROAS ----------
+    heading("Top 5 por ROAS");
     for (const c of report.topByRoas) {
-      doc.text(`${c.name} — ROAS ${c.roas ?? "—"}x · gasto ${money(c.spend)} · ${c.results} resultados`);
+      line(() => doc.fillColor(INK).font("Helvetica-Bold").fontSize(9).text(c.name, M, y, { continued: true })
+        .fillColor(MUTED).font("Helvetica").text(`  ·  ROAS ${c.roas ?? "—"}x · gasto ${money(c.spend)} · ${c.results} resultados`, { width: innerW }));
     }
-    doc.moveDown(0.8);
+    y += 10;
 
-    doc.fillColor("#111").fontSize(13).text("5 campañas con CPA más alto");
-    doc.moveDown(0.3);
-    doc.fontSize(9).fillColor("#333");
+    // ---------- Worst by CPA ----------
+    heading("5 campañas con CPA más alto");
     for (const c of report.worstByCpa) {
-      doc.text(`${c.name} — CPA ${c.cpa !== null ? money(c.cpa) : "—"} · gasto ${money(c.spend)} · ${c.results} resultados`);
+      line(() => doc.fillColor(INK).font("Helvetica-Bold").fontSize(9).text(c.name, M, y, { continued: true })
+        .fillColor(MUTED).font("Helvetica").text(`  ·  CPA ${c.cpa !== null ? money(c.cpa) : "—"} · gasto ${money(c.spend)} · ${c.results} resultados`, { width: innerW }));
     }
 
-    doc.moveDown(2);
-    doc.fontSize(8).fillColor("#aaa").text("Generado por Pulse · Ads Intelligence Agent", { align: "center" });
+    // ---------- Footer ----------
+    doc.fillColor("#b3acc4").font("Helvetica").fontSize(8)
+      .text("Generado por Pulse · Pulse no está afiliado a Meta Platforms, Inc.", M, H - 40, { width: innerW, align: "center" });
 
     doc.end();
   });

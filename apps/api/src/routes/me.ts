@@ -4,6 +4,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { prisma } from "../db/prisma.js";
+import { isSuperadmin } from "../lib/superadmin.js";
 
 const RegisterOneSignalBody = z.object({
   externalUserId: z.string().min(8).max(128)
@@ -28,7 +29,8 @@ export const meRoutes: FastifyPluginAsync = async (app) => {
         id: user.id,
         email: user.email,
         name: user.name,
-        oneSignalExternalId: user.oneSignalExternalId
+        oneSignalExternalId: user.oneSignalExternalId,
+        isSuperadmin: isSuperadmin(user.email)
       },
       organization: { id: org.id, slug: org.slug, name: org.name },
       role: auth.role,

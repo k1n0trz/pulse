@@ -71,26 +71,29 @@ export function NotificationsButton() {
     }
   }, [refresh, status, working]);
 
+  // Explains, in plain language, what enabling notifications does.
+  const HELP = "Recibe un aviso en este navegador cuando una campaña necesite tu atención: gasto sin resultados, caída de ROAS o presupuesto agotándose.";
+
   if (status === "loading") {
     return (
-      <button className="ghost-button" disabled title="Verificando notificaciones…">
-        <Loader2 size={16} className="spin" /> Notificaciones
+      <button className="ghost-button" disabled title="Verificando avisos…">
+        <Loader2 size={16} className="spin" /> Avisos
       </button>
     );
   }
 
   if (status === "not-configured") {
     return (
-      <button className="ghost-button" disabled title="Set ONESIGNAL_APP_ID + ONESIGNAL_API_KEY en .env">
-        <BellOff size={16} /> Notificaciones off
+      <button className="ghost-button" disabled title="Avisos no disponibles: falta configurar ONESIGNAL_APP_ID + ONESIGNAL_API_KEY.">
+        <BellOff size={16} /> Avisos no disponibles
       </button>
     );
   }
 
   if (status === "unsupported") {
     return (
-      <button className="ghost-button" disabled title="Browser sin soporte web push">
-        <BellOff size={16} /> No soportado
+      <button className="ghost-button" disabled title="Este navegador no soporta avisos push.">
+        <BellOff size={16} /> Avisos no soportados
       </button>
     );
   }
@@ -100,10 +103,10 @@ export function NotificationsButton() {
       className={`ghost-button ${status === "on" ? "is-on" : ""}`}
       onClick={() => void toggle()}
       disabled={working}
-      title={status === "on" ? "Desactivar notificaciones push" : status === "denied" ? "Permiso denegado — revisa site settings" : "Activar notificaciones push"}
+      title={status === "on" ? `Avisos activos. Clic para desactivar. ${HELP}` : status === "denied" ? "Avisos bloqueados por el navegador — habilítalos en la configuración del sitio." : `Activar avisos. ${HELP}`}
     >
       {working ? <Loader2 size={16} className="spin" /> : status === "on" ? <Bell size={16} /> : status === "denied" ? <AlertCircle size={16} /> : <BellOff size={16} />}
-      {status === "on" ? "Notificaciones ON" : status === "denied" ? "Bloqueadas" : "Activar push"}
+      {status === "on" ? "Avisos activos" : status === "denied" ? "Avisos bloqueados" : "Activar avisos"}
       {error && <small className="error-text" style={{ marginLeft: 8 }}>{error}</small>}
     </button>
   );
